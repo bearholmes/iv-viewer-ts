@@ -1,0 +1,44 @@
+{
+  "name": "iv-viewer-ts",
+  "version": "2.1.2",
+  "description": "A zooming and panning plugin inspired by google photos for your web images.",
+  "main": "src/index.ts",
+  "module": "../iv-viewer-ts/dist/iv-viewer.mjs",
+  "umd:main": "dist/iv-viewer.umd.js",
+  "typings": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bearholmes/iv-viewer.git"
+  },
+  "keywords": [
+    "image",
+    "zooming",
+    "panning",
+    "google",
+    "photos"
+  ],
+  "author": "Sudhanshu Yadav",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/s-yadav/iv-viewer/issues"
+  },
+  "homepage": "https://github.com/s-yadav/iv-viewer#readme",
+  "scripts": {
+    "build": "vite build  && tsc",
+    "build-css": "node build-css.cjs"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.56.0",
+    "@typescript-eslint/parser": "^5.56.0",
+    "autoprefixer": "^10.4.14",
+    "cssnano": "^5.1.15",
+    "eslint": "^8.36.0",
+    "postcss": "^8.4.21",
+    "sass": "^1.59.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.2.1",
+    "vite-plugin-dts": "^2.1.0"
+  },
+  "dependencies": {
+  }
+}
