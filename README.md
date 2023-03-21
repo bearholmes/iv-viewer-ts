@@ -6,7 +6,8 @@ This library is a fork of the [s-yadav/iv-viewer](https://github.com/s-yadav/iv-
 the applied TypeScript code is not perfect and will be gradually improved over time.
 
 ### The original library can be found here.
-[:star: this repo](https://github.com/s-yadav/iv-viewer)
+
+All credit to the original [:star: iv-viewer](https://github.com/s-yadav/iv-viewer)
 
 
 ### Features
