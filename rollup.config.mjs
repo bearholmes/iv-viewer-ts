@@ -15,7 +15,7 @@ const tasks = [
     input: 'src/index.ts',
     output: {
       name: 'iv-viewer',
-      file: 'dist/iv-viewer.js',
+      file: 'dist/iv-viewer-ts.js',
       sourcemap: true,
       format: 'cjs',
       exports: 'named',
