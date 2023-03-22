@@ -65,9 +65,9 @@ class ImageViewer {
     zoomSlider?: any;
   };
   private _frames: {
-    slideMomentumCheck?: number;
+    slideMomentumCheck?: NodeJS.Timer;
     zoomFrame?: number;
-    snapViewTimeout?: number;
+    snapViewTimeout?: NodeJS.Timeout;
     sliderMomentumFrame?: number;
   };
   private _images: { hiResImageSrc: any; imageSrc: any };
