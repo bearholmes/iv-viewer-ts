@@ -43,7 +43,10 @@ export function createElement (options: CreateElementOptions) {
   if (options.id) elem.id = options.id;
   if (options.html) elem.innerHTML = options.html;
   if (options.className) elem.className = options.className;
-  if (options.src && elem instanceof HTMLImageElement) elem.setAttribute('src', options.src);
+  if (options.src && elem instanceof HTMLImageElement) {
+    const escapedSrc = encodeURIComponent(options.src);
+    elem.setAttribute('src', escapedSrc);
+  }
   if (options.style) elem.style.cssText = options.style;
   if (options.child) elem.appendChild(options.child);
 

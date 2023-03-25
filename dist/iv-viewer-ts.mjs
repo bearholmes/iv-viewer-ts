@@ -4,7 +4,11 @@ function C(i, e, t, s) {
 }
 function b(i) {
   const e = document.createElement(i.tagName);
-  return i.id && (e.id = i.id), i.html && (e.innerHTML = i.html), i.className && (e.className = i.className), i.src && e instanceof HTMLImageElement && e.setAttribute("src", i.src), i.style && (e.style.cssText = i.style), i.child && e.appendChild(i.child), i.insertBefore ? i.parent.insertBefore(e, i.insertBefore) : i.parent.appendChild(e), e;
+  if (i.id && (e.id = i.id), i.html && (e.innerHTML = i.html), i.className && (e.className = i.className), i.src && e instanceof HTMLImageElement) {
+    const t = encodeURIComponent(i.src);
+    e.setAttribute("src", t);
+  }
+  return i.style && (e.style.cssText = i.style), i.child && e.appendChild(i.child), i.insertBefore ? i.parent.insertBefore(e, i.insertBefore) : i.parent.appendChild(e), e;
 }
 function O(i, e) {
   const t = e.split(" ");
@@ -36,7 +40,7 @@ function m(i, e) {
 function q(i, e) {
   i.style.removeProperty(e);
 }
-function B(i, { tag: e = "div", className: t, id: s, style: n }) {
+function R(i, { tag: e = "div", className: t, id: s, style: n }) {
   const l = document.createElement(e);
   t && (l.className = t), s && (l.id = s), n && (n.display && (l.style.display = n.display), n.overflow && (l.style.overflow = n.overflow));
   const o = i.parentNode;
@@ -44,7 +48,7 @@ function B(i, { tag: e = "div", className: t, id: s, style: n }) {
     throw new Error("element does not have a parent node");
   return o.insertBefore(l, i), o.removeChild(i), l.appendChild(i), l;
 }
-function R(i) {
+function B(i) {
   const e = i.parentNode;
   e && e !== document.body && (e.parentNode?.insertBefore(i, e), e.parentNode?.removeChild(e));
 }
@@ -198,7 +202,7 @@ class D {
     if (typeof e == "string" && (t = document.querySelector(e)), t._imageViewer)
       throw new Error("An image viewer is already being initiated on the element.");
     let l = e;
-    return t.tagName === "IMG" ? (s = t.src, n = t.getAttribute("high-res-src") || t.getAttribute("data-high-res-src"), l = B(t, { className: "iv-container iv-image-mode", style: { display: "inline-block", overflow: "hidden" } }), m(t, {
+    return t.tagName === "IMG" ? (s = t.src, n = t.getAttribute("high-res-src") || t.getAttribute("data-high-res-src"), l = R(t, { className: "iv-container iv-image-mode", style: { display: "inline-block", overflow: "hidden" } }), m(t, {
       opacity: 0,
       position: "relative",
       zIndex: -1
@@ -475,13 +479,13 @@ class D {
     const g = (a.w - r.w) / 2, w = (a.h - r.h) / 2, y = a.w - g, z = a.h - w, V = () => {
       v++, v < 16 && (this._frames.zoomFrame = requestAnimationFrame(V));
       const x = C(v, o, e - o, 16), N = x / o, M = r.w * x / 100, I = r.h * x / 100;
-      let E = -((t.x - p) * N - t.x), S = -((t.y - f) * N - t.y);
-      E = Math.min(E, g), S = Math.min(S, w), E + M < y && (E = y - M), S + I < z && (S = z - I), m(c, {
+      let S = -((t.x - p) * N - t.x), E = -((t.y - f) * N - t.y);
+      S = Math.min(S, g), E = Math.min(E, w), S + M < y && (S = y - M), E + I < z && (E = z - I), m(c, {
         height: `${I}px`,
         width: `${M}px`,
-        left: `${E}px`,
-        top: `${S}px`
-      }), this._state.zoomValue = x, this._resizeSnapHandle(M, I, E, S), m(d, {
+        left: `${S}px`,
+        top: `${E}px`
+      }), this._state.zoomValue = x, this._resizeSnapHandle(M, I, S, E), m(d, {
         left: `${(x - 100) * (h || 0) / (u - 100)}px`
       }), this._listeners.onZoomChange && this._listeners.onZoomChange(this._callbackData);
     };
@@ -526,7 +530,7 @@ class D {
       s.destroy();
     }), Object.entries(this._events).forEach(([, s]) => {
       s();
-    }), this._clearFrames(), L(e.querySelector(".iv-wrap")), F(e, "iv-container"), q(document.querySelector("html"), "relative"), t !== e && R(t), t._imageViewer = null, this._listeners.onDestroy && this._listeners.onDestroy();
+    }), this._clearFrames(), L(e.querySelector(".iv-wrap")), F(e, "iv-container"), q(document.querySelector("html"), "relative"), t !== e && B(t), t._imageViewer = null, this._listeners.onDestroy && this._listeners.onDestroy();
   }
   /**
    * Data will be passed to the callback registered with each new instance
