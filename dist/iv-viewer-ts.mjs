@@ -4,7 +4,7 @@ function C(i, e, t, s) {
 }
 function b(i) {
   const e = document.createElement(i.tagName);
-  return i.id && (e.id = i.id), i.html && (e.innerHTML = i.html), i.className && (e.className = i.className), i.src && e instanceof HTMLImageElement && (e.src = i.src), i.style && (e.style.cssText = i.style), i.child && e.appendChild(i.child), i.insertBefore ? i.parent.insertBefore(e, i.insertBefore) : i.parent.appendChild(e), e;
+  return i.id && (e.id = i.id), i.html && (e.innerHTML = i.html), i.className && (e.className = i.className), i.src && e instanceof HTMLImageElement && e.setAttribute("src", i.src), i.style && (e.style.cssText = i.style), i.child && e.appendChild(i.child), i.insertBefore ? i.parent.insertBefore(e, i.insertBefore) : i.parent.appendChild(e), e;
 }
 function O(i, e) {
   const t = e.split(" ");
@@ -17,7 +17,7 @@ function F(i, e) {
     " "
   );
 }
-function Z(i) {
+function A(i) {
   return i.complete && (typeof i.naturalWidth > "u" || i.naturalWidth !== 0);
 }
 function $(i) {
@@ -62,7 +62,7 @@ function _(i, e, t) {
     s.forEach((n) => i.removeEventListener(n, t));
   };
 }
-function A(i) {
+function Z(i) {
   const e = i[0], t = i[1];
   return Math.sqrt(
     Math.pow(t.pageX - e.pageX, 2) + Math.pow(t.pageY - e.pageY, 2)
@@ -346,11 +346,11 @@ class D {
       if (!(a && h))
         return;
       this._state.zooming = !0;
-      const c = t.getBoundingClientRect(), d = A(n.touches), u = {
+      const c = t.getBoundingClientRect(), d = Z(n.touches), u = {
         x: (h.pageX + a.pageX) / 2 - (c.left + document.body.scrollLeft),
         y: (h.pageY + a.pageY) / 2 - (c.top + document.body.scrollTop)
       }, p = (v) => {
-        const g = A(v.touches), w = o + (g - d) / 2;
+        const g = Z(v.touches), w = o + (g - d) / 2;
         this.zoom(w, u);
       }, f = (v) => {
         r.pinchMove && r.pinchMove(), r.pinchEnd && r.pinchEnd(), this._state.zooming = !1, v.touches.length === 1 && this._sliders.imageSlider.startHandler(v);
@@ -414,7 +414,7 @@ class D {
     const d = () => {
       m(a, { display: "none" }), m(c, { visibility: "visible" }), n && this._loadHighResImage(n), this._state.loaded = !0, this._calculateDimensions(), this._listeners.onImageLoad && this._listeners.onImageLoaded(this._callbackData), this.resetZoom();
     };
-    Z(c) ? d() : this._events.imageLoad = _(c, "load", d);
+    A(c) ? d() : this._events.imageLoad = _(c, "load", d);
   }
   _loadHighResImage(e) {
     const { imageWrap: t, container: s } = this._elements, n = this._elements.image, l = b({
@@ -428,7 +428,7 @@ class D {
     const o = () => {
       L(n), this._elements.image = l;
     };
-    Z(l) ? o() : this._events.hiResImageLoad = _(l, "load", o);
+    A(l) ? o() : this._events.hiResImageLoad = _(l, "load", o);
   }
   _calculateDimensions() {
     const { image: e, container: t, snapView: s, snapImage: n, zoomHandle: l } = this._elements, o = parseInt(m(e, "width"), 10), r = parseInt(m(e, "height"), 10), a = parseInt(m(t, "width"), 10), h = parseInt(m(t, "height"), 10), c = s.clientWidth, d = s.clientHeight;

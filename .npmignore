@@ -18,3 +18,4 @@ temp/
 /assets/
 /example/
 .idea
+yarn-error.log
