@@ -755,12 +755,14 @@ class ImageViewer {
       h: contHeight,
     };
 
-    const ratio = imageWidth / imageHeight;
+    const imgOriginWidth = image.naturalWidth || imageWidth
+    const imgOriginHeight = image.naturalHeight || imageHeight;
 
+    const ratio = imgOriginWidth / imgOriginHeight;
     // set the image dimension
-    const imgWidth = (imageWidth > imageHeight && contHeight >= contWidth) || ratio * contHeight > contWidth
-      ? contWidth
-      : ratio * contHeight;
+    const imgWidth = (imgOriginWidth > imgOriginHeight && contHeight >= contWidth) || ratio * contHeight > contWidth
+        ? contWidth
+        : ratio * contHeight;
 
     const imgHeight = imgWidth / ratio;
 
