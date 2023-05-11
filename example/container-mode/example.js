@@ -12,6 +12,9 @@ const images = [{
 }, {
   small: '../images/4.jpg',
   big: '../images/4_big.jpg',
+}, {
+  small: '../images/5.png',
+  big: '',
 }];
 
 let curImageIdx = 1;
