@@ -1,6 +1,6 @@
 {
   "name": "iv-viewer-ts",
-  "version": "2.1.10",
+  "version": "2.1.11",
   "description": "A zooming and panning plugin inspired by google photos for your web images.",
   "main": "dist/iv-viewer-ts.js",
   "module": "dist/iv-viewer-ts.mjs",

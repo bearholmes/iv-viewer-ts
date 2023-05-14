@@ -167,23 +167,23 @@ class H {
   }
   get imageViewHtml() {
     return `
-    <div class="iv-loader"></div>
-    <div class="iv-snap-view">
-      <div class="iv-snap-image-wrap">
-        <div class="iv-snap-handle"></div>
-      </div>
-      <div class="iv-zoom-actions ${this._options.hasZoomButtons ? "iv-zoom-actions--has-buttons" : ""}">
-        ${this.zoomInButton}
-        <div class="iv-zoom-slider">
-          <div class="iv-zoom-handle"></div>
-        </div>
-        ${this.zoomOutButton}
-      </div>
-    </div>
-    <div class="iv-image-view" >
-      <div class="iv-image-wrap" ></div>
-    </div>
-  `;
+   <div class="iv-loader"></div>
+   <div class="iv-snap-view">
+     <div class="iv-snap-image-wrap">
+       <div class="iv-snap-handle"></div>
+     </div>
+     <div class="iv-zoom-actions ${this._options.hasZoomButtons ? "iv-zoom-actions--has-buttons" : ""}">
+       ${this.zoomInButton}
+       <div class="iv-zoom-slider">
+         <div class="iv-zoom-handle"></div>
+       </div>
+       ${this.zoomOutButton}
+     </div>
+   </div>
+   <div class="iv-image-view" >
+     <div class="iv-image-wrap" ></div>
+   </div>
+ `;
   }
   constructor(e, t = {}) {
     const { container: s, domElement: n, imageSrc: r, hiResImageSrc: o } = this._findContainerAndImageSrc(e);
@@ -202,7 +202,10 @@ class H {
     if (typeof e == "string" && (t = document.querySelector(e)), t._imageViewer)
       throw new Error("An image viewer is already being initiated on the element.");
     let r = e;
-    return t.tagName === "IMG" ? (s = t.src, n = t.getAttribute("high-res-src") || t.getAttribute("data-high-res-src"), r = R(t, { className: "iv-container iv-image-mode", style: { display: "inline-block", overflow: "hidden" } }), m(t, {
+    return t.tagName === "IMG" ? (s = t.src, n = t.getAttribute("high-res-src") || t.getAttribute("data-high-res-src"), r = R(t, {
+      className: "iv-container iv-image-mode",
+      style: { display: "inline-block", overflow: "hidden" }
+    }), m(t, {
       opacity: 0,
       position: "relative",
       zIndex: -1
@@ -405,16 +408,16 @@ class H {
     const h = b({
       tagName: "img",
       className: "iv-snap-image",
-      src: s,
       insertBefore: o.firstChild,
       parent: o
-    }), c = b({
+    });
+    h.src = String(s);
+    const c = b({
       tagName: "img",
       className: "iv-image iv-small-image",
-      src: s,
       parent: l
     });
-    this._state.loaded = !1, this._elements.image = c, this._elements.snapImage = h, m(a, { display: "block" }), m(c, { visibility: "hidden" }), this.hideSnapView();
+    c.src = String(s), this._state.loaded = !1, this._elements.image = c, this._elements.snapImage = h, m(a, { display: "block" }), m(c, { visibility: "hidden" }), this.hideSnapView();
     const d = () => {
       m(a, { display: "none" }), m(c, { visibility: "visible" }), n && this._loadHighResImage(n), this._state.loaded = !0, this._calculateDimensions(), this._listeners.onImageLoad && this._listeners.onImageLoaded(this._callbackData), this.resetZoom();
     };
