@@ -148,43 +148,17 @@ class T {
   }
 }
 class H {
+  static defaults;
+  static FullScreenViewer;
+  _ev;
   _elements;
+  _events;
   _options;
   _listeners;
-  _events;
   _state;
   _sliders;
   _frames;
   _images;
-  static defaults;
-  static FullScreenViewer;
-  _ev;
-  get zoomInButton() {
-    return this._options.hasZoomButtons ? '<div class="iv-button-zoom--in" role="button"></div>' : "";
-  }
-  get zoomOutButton() {
-    return this._options.hasZoomButtons ? '<div class="iv-button-zoom--out" role="button"></div>' : "";
-  }
-  get imageViewHtml() {
-    return `
-   <div class="iv-loader"></div>
-   <div class="iv-snap-view">
-     <div class="iv-snap-image-wrap">
-       <div class="iv-snap-handle"></div>
-     </div>
-     <div class="iv-zoom-actions ${this._options.hasZoomButtons ? "iv-zoom-actions--has-buttons" : ""}">
-       ${this.zoomInButton}
-       <div class="iv-zoom-slider">
-         <div class="iv-zoom-handle"></div>
-       </div>
-       ${this.zoomOutButton}
-     </div>
-   </div>
-   <div class="iv-image-view" >
-     <div class="iv-image-wrap" ></div>
-   </div>
- `;
-  }
   constructor(e, t = {}) {
     const { container: s, domElement: n, imageSrc: r, hiResImageSrc: o } = this._findContainerAndImageSrc(e);
     this._elements = {
@@ -196,6 +170,45 @@ class H {
       imageSrc: r,
       hiResImageSrc: o
     }, this._init(), r && this._loadImages(), n._imageViewer = this;
+  }
+  get zoomInButton() {
+    return this._options.hasZoomButtons ? '<div class="iv-button-zoom--in" role="button"></div>' : "";
+  }
+  get zoomOutButton() {
+    return this._options.hasZoomButtons ? '<div class="iv-button-zoom--out" role="button"></div>' : "";
+  }
+  get imageViewHtml() {
+    return `
+  <div class="iv-loader"></div>
+  <div class="iv-snap-view">
+    <div class="iv-snap-image-wrap">
+      <div class="iv-snap-handle"></div>
+    </div>
+    <div class="iv-zoom-actions ${this._options.hasZoomButtons ? "iv-zoom-actions--has-buttons" : ""}">
+      ${this.zoomInButton}
+      <div class="iv-zoom-slider">
+        <div class="iv-zoom-handle"></div>
+      </div>
+      ${this.zoomOutButton}
+    </div>
+  </div>
+  <div class="iv-image-view" >
+    <div class="iv-image-wrap" ></div>
+  </div>
+`;
+  }
+  /**
+   * Data will be passed to the callback registered with each new instance
+   */
+  get _callbackData() {
+    return {
+      container: this._elements.container,
+      snapView: this._elements.snapView,
+      zoomValue: this._state.zoomValue,
+      reachedMin: Math.round(this._state.zoomValue) === this._options.zoomValue,
+      reachedMax: Math.round(this._state.zoomValue) === this._options.maxZoom,
+      instance: this
+    };
   }
   _findContainerAndImageSrc(e) {
     let t = e, s, n;
@@ -266,14 +279,14 @@ class H {
       onEnd: () => {
         const { snapImageDim: o } = this._state, { snapSlider: l } = this._sliders, a = this._getImageCurrentDim();
         this._clearFrames();
-        let h, c, d;
-        const u = s[1].x - s[0].x, f = s[1].y - s[0].y, v = () => {
-          h <= 60 && (this._frames.sliderMomentumFrame = requestAnimationFrame(v)), c += C(h, u / 3, -u / 3, 60), d += C(h, f / 3, -f / 3, 60), l.onMove(null, {
+        let h, c, u;
+        const d = s[1].x - s[0].x, g = s[1].y - s[0].y, v = () => {
+          h <= 60 && (this._frames.sliderMomentumFrame = requestAnimationFrame(v)), c += C(h, d / 3, -d / 3, 60), u += C(h, g / 3, -g / 3, 60), l.onMove(null, {
             dx: -(c * o.w / a.w),
-            dy: -(d * o.h / a.h)
+            dy: -(u * o.h / a.h)
           }), h++;
         };
-        (Math.abs(u) > 30 || Math.abs(f) > 30) && (h = 1, c = n.dx, d = n.dy, v());
+        (Math.abs(d) > 30 || Math.abs(g) > 30) && (h = 1, c = n.dx, u = n.dy, v());
       }
     });
     r.init(), this._sliders.imageSlider = r;
@@ -293,10 +306,10 @@ class H {
         const { snapHandleDim: l, snapImageDim: a } = this._state, { image: h } = this._elements, c = this._getImageCurrentDim();
         if (!l)
           return;
-        const d = Math.max(a.w - l.w, s), u = Math.max(a.h - l.h, t), f = Math.min(0, s), v = Math.min(0, t), p = W(s + o.dx, f, d), g = W(t + o.dy, v, u), w = -p * c.w / a.w, y = -g * c.h / a.h;
+        const u = Math.max(a.w - l.w, s), d = Math.max(a.h - l.h, t), g = Math.min(0, s), v = Math.min(0, t), p = W(s + o.dx, g, u), f = W(t + o.dy, v, d), w = -p * c.w / a.w, y = -f * c.h / a.h;
         m(e, {
           left: `${p}px`,
-          top: `${g}px`
+          top: `${f}px`
         }), m(h, {
           left: `${w}px`,
           top: `${y}px`
@@ -318,8 +331,8 @@ class H {
         const { maxZoom: a } = this._options, { zoomSliderLength: h } = this._state, c = l.pageX !== void 0 ? l.pageX : l.touches[0].pageX;
         if (!h)
           return;
-        const d = W(c - n - r / 2, 0, h), u = 100 + (a - 100) * d / h;
-        this.zoom(u);
+        const u = W(c - n - r / 2, 0, h), d = 100 + (a - 100) * u / h;
+        this.zoom(d);
       }
     });
     o.init(), this._sliders.zoomSlider = o;
@@ -353,16 +366,16 @@ class H {
       if (!(a && h))
         return;
       this._state.zooming = !0;
-      const c = t.getBoundingClientRect(), d = O(n.touches), u = {
+      const c = t.getBoundingClientRect(), u = O(n.touches), d = {
         x: (h.pageX + a.pageX) / 2 - (c.left + document.body.scrollLeft),
         y: (h.pageY + a.pageY) / 2 - (c.top + document.body.scrollTop)
-      }, f = (p) => {
-        const g = O(p.touches), w = o + (g - d) / 2;
-        this.zoom(w, u);
+      }, g = (p) => {
+        const f = O(p.touches), w = o + (f - u) / 2;
+        this.zoom(w, d);
       }, v = (p) => {
         l.pinchMove && l.pinchMove(), l.pinchEnd && l.pinchEnd(), this._state.zooming = !1, p.touches.length === 1 && this._sliders.imageSlider.startHandler(p);
       };
-      l.pinchMove && l.pinchMove(), l.pinchEnd && l.pinchEnd(), l.pinchMove = _(document, "touchmove", f), l.pinchEnd = _(document, "touchend", v);
+      l.pinchMove && l.pinchMove(), l.pinchEnd && l.pinchEnd(), l.pinchMove = _(document, "touchmove", g), l.pinchEnd = _(document, "touchend", v);
     };
     this._events.pinchStart = _(e, "touchstart", s);
   }
@@ -377,10 +390,10 @@ class H {
       const h = Math.max(-1, Math.min(1, o.wheelDelta || -o.detail || -o.deltaY)), c = a * (100 + h * 15) / 100;
       if (c >= 100 && c <= e.maxZoom ? n = 0 : n += Math.abs(h), o.preventDefault(), n > 5)
         return;
-      const d = t.getBoundingClientRect(), u = (o.pageX || o.pageX) - (d.left + document.body.scrollLeft), f = (o.pageY || o.pageY) - (d.top + document.body.scrollTop);
+      const u = t.getBoundingClientRect(), d = (o.pageX || o.pageX) - (u.left + document.body.scrollLeft), g = (o.pageY || o.pageY) - (u.top + document.body.scrollTop);
       this.zoom(c, {
-        x: u,
-        y: f
+        x: d,
+        y: g
       }), this.showSnapView();
     };
     this._ev = _(s, "wheel", r);
@@ -418,10 +431,12 @@ class H {
       parent: l
     });
     c.src = String(s), this._state.loaded = !1, this._elements.image = c, this._elements.snapImage = h, m(a, { display: "block" }), m(c, { visibility: "hidden" }), this.hideSnapView();
-    const d = () => {
-      m(a, { display: "none" }), m(c, { visibility: "visible" }), n && this._loadHighResImage(n), this._state.loaded = !0, this._calculateDimensions(), this._listeners.onImageLoad && this._listeners.onImageLoaded(this._callbackData), this.resetZoom();
+    const u = () => {
+      m(a, { display: "none" }), m(c, { visibility: "visible" }), n && this._loadHighResImage(n), this._state.loaded = !0, this._calculateDimensions(), console.log(this._listeners.onImageLoaded, "this._listeners.onImageLoaded"), this._listeners.onImageLoaded && this._listeners.onImageLoaded(this._callbackData), this.resetZoom();
+    }, d = (g) => {
+      console.log(g, "error", this._listeners.onImageError), m(a, { display: "none" }), this._listeners.onImageError && this._listeners.onImageError(g);
     };
-    A(c) ? d() : this._events.imageLoad = _(c, "load", d);
+    A(c) ? u() : (this._events.imageLoad = _(c, "load", u), this._events.imageError = _(c, "error", d));
   }
   _loadHighResImage(e) {
     const { imageWrap: t, container: s } = this._elements, n = this._elements.image, r = b({
@@ -438,24 +453,24 @@ class H {
     A(r) ? o() : this._events.hiResImageLoad = _(r, "load", o);
   }
   _calculateDimensions() {
-    const { image: e, container: t, snapView: s, snapImage: n, zoomHandle: r } = this._elements, o = parseInt(m(e, "width"), 10), l = parseInt(m(e, "height"), 10), a = parseInt(m(t, "width"), 10), h = parseInt(m(t, "height"), 10), c = s.clientWidth, d = s.clientHeight;
+    const { image: e, container: t, snapView: s, snapImage: n, zoomHandle: r } = this._elements, o = parseInt(m(e, "width"), 10), l = parseInt(m(e, "height"), 10), a = parseInt(m(t, "width"), 10), h = parseInt(m(t, "height"), 10), c = s.clientWidth, u = s.clientHeight;
     this._state.containerDim = {
       w: a,
       h
     };
-    const u = e.naturalWidth || o, f = e.naturalHeight || l, v = u / f, p = u > f && h >= a || v * h > a ? a : v * h, g = p / v;
+    const d = e.naturalWidth || o, g = e.naturalHeight || l, v = d / g, p = d > g && h >= a || v * h > a ? a : v * h, f = p / v;
     this._state.imageDim = {
       w: p,
-      h: g
+      h: f
     }, m(e, {
       width: `${p}px`,
-      height: `${g}px`,
+      height: `${f}px`,
       left: `${(a - p) / 2}px`,
-      top: `${(h - g) / 2}px`,
+      top: `${(h - f) / 2}px`,
       maxWidth: "none",
       maxHeight: "none"
     });
-    const w = p > g ? c : p * d / g, y = g > p ? d : g * c / p;
+    const w = p > f ? c : p * u / f, y = f > p ? u : f * c / p;
     this._state.snapImageDim = {
       w,
       h: y
@@ -463,33 +478,33 @@ class H {
       width: `${w}px`,
       height: `${y}px`
     });
-    const S = s.querySelector(".iv-zoom-slider").clientWidth;
-    this._state.zoomSliderLength = S - r.offsetWidth;
+    const E = s.querySelector(".iv-zoom-slider").clientWidth;
+    this._state.zoomSliderLength = E - r.offsetWidth;
   }
   resetZoom(e = !0) {
     const { zoomValue: t } = this._options;
     e || (this._state.zoomValue = t), this.zoom(t);
   }
   zoom = (e, t) => {
-    const { _options: s, _elements: n, _state: r } = this, { zoomValue: o, imageDim: l, containerDim: a, zoomSliderLength: h } = r, { image: c, zoomHandle: d } = n, { maxZoom: u } = s;
-    e = Math.round(Math.max(100, e)), e = Math.min(u, e), t = t || {
+    const { _options: s, _elements: n, _state: r } = this, { zoomValue: o, imageDim: l, containerDim: a, zoomSliderLength: h } = r, { image: c, zoomHandle: u } = n, { maxZoom: d } = s;
+    e = Math.round(Math.max(100, e)), e = Math.min(d, e), t = t || {
       x: a.w / 2,
       y: a.h / 2
     };
-    const f = parseFloat(m(c, "left")), v = parseFloat(m(c, "top"));
+    const g = parseFloat(m(c, "left")), v = parseFloat(m(c, "top"));
     this._clearFrames();
     let p = 0;
-    const g = (a.w - l.w) / 2, w = (a.h - l.h) / 2, y = a.w - g, S = a.h - w, V = () => {
+    const f = (a.w - l.w) / 2, w = (a.h - l.h) / 2, y = a.w - f, E = a.h - w, V = () => {
       p++, p < 16 && (this._frames.zoomFrame = requestAnimationFrame(V));
       const x = C(p, o, e - o, 16), N = x / o, M = l.w * x / 100, I = l.h * x / 100;
-      let E = -((t.x - f) * N - t.x), z = -((t.y - v) * N - t.y);
-      E = Math.min(E, g), z = Math.min(z, w), E + M < y && (E = y - M), z + I < S && (z = S - I), m(c, {
+      let S = -((t.x - g) * N - t.x), z = -((t.y - v) * N - t.y);
+      S = Math.min(S, f), z = Math.min(z, w), S + M < y && (S = y - M), z + I < E && (z = E - I), m(c, {
         height: `${I}px`,
         width: `${M}px`,
-        left: `${E}px`,
+        left: `${S}px`,
         top: `${z}px`
-      }), this._state.zoomValue = x, this._resizeSnapHandle(M, I, E, z), m(d, {
-        left: `${(x - 100) * (h || 0) / (u - 100)}px`
+      }), this._state.zoomValue = x, this._resizeSnapHandle(M, I, S, z), m(u, {
+        left: `${(x - 100) * (h || 0) / (d - 100)}px`
       }), this._listeners.onZoomChange && this._listeners.onZoomChange(this._callbackData);
     };
     V();
@@ -499,14 +514,14 @@ class H {
     clearInterval(e), typeof t == "number" && cancelAnimationFrame(t), typeof s == "number" && cancelAnimationFrame(s);
   };
   _resizeSnapHandle = (e, t, s, n) => {
-    const { _elements: r, _state: o } = this, { snapHandle: l, image: a } = r, { imageDim: h, containerDim: c, zoomValue: d, snapImageDim: u } = o, f = e || h.w * d / 100, v = t || h.h * d / 100, p = s || parseFloat(m(a, "left")), g = n || parseFloat(m(a, "top")), w = -p * u.w / f, y = -g * u.h / v, S = c.w * u.w / f, V = c.h * u.h / v;
+    const { _elements: r, _state: o } = this, { snapHandle: l, image: a } = r, { imageDim: h, containerDim: c, zoomValue: u, snapImageDim: d } = o, g = e || h.w * u / 100, v = t || h.h * u / 100, p = s || parseFloat(m(a, "left")), f = n || parseFloat(m(a, "top")), w = -p * d.w / g, y = -f * d.h / v, E = c.w * d.w / g, V = c.h * d.h / v;
     m(l, {
       top: `${y}px`,
       left: `${w}px`,
-      width: `${S}px`,
+      width: `${E}px`,
       height: `${V}px`
     }), this._state.snapHandleDim = {
-      w: S,
+      w: E,
       h: V
     };
   };
@@ -535,19 +550,6 @@ class H {
       s();
     }), this._clearFrames(), L(e.querySelector(".iv-wrap")), F(e, "iv-container"), q(document.querySelector("html"), "relative"), t !== e && B(t), t._imageViewer = null, this._listeners.onDestroy && this._listeners.onDestroy();
   }
-  /**
-   * Data will be passed to the callback registered with each new instance
-   */
-  get _callbackData() {
-    return {
-      container: this._elements.container,
-      snapView: this._elements.snapView,
-      zoomValue: this._state.zoomValue,
-      reachedMin: Math.round(this._state.zoomValue) === this._options.zoomValue,
-      reachedMax: Math.round(this._state.zoomValue) === this._options.maxZoom,
-      instance: this
-    };
-  }
 }
 H.defaults = {
   zoomValue: 100,
@@ -561,7 +563,8 @@ H.defaults = {
     onInit: null,
     onDestroy: null,
     onImageLoaded: null,
-    onZoomChange: null
+    onZoomChange: null,
+    onImageError: null
   }
 };
 const k = `

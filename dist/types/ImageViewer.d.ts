@@ -1,8 +1,9 @@
 import FullScreenViewer from "./FullScreen";
 declare class ImageViewer {
+    static defaults: any;
+    static FullScreenViewer: typeof FullScreenViewer;
+    _ev: any;
     protected _elements: any;
-    private _options;
-    private _listeners;
     protected _events: {
         pinchStart?: () => void;
         zoomOutClick?: () => void;
@@ -10,6 +11,7 @@ declare class ImageViewer {
         mouseLeaveSnapView?: () => void;
         mouseEnterSnapView?: () => void;
         imageLoad?: () => void;
+        imageError?: () => void;
         hiResImageLoad?: () => void;
         snapViewOnMouseMove?: () => void;
         onWindowResize?: () => void;
@@ -17,17 +19,27 @@ declare class ImageViewer {
         pinchMove?: () => void;
         pinchEnd?: () => void;
     };
+    private _options;
+    private _listeners;
     private _state;
     private _sliders;
     private _frames;
     private _images;
-    static defaults: any;
-    static FullScreenViewer: typeof FullScreenViewer;
-    _ev: any;
+    constructor(element: any, options?: {});
     get zoomInButton(): "<div class=\"iv-button-zoom--in\" role=\"button\"></div>" | "";
     get zoomOutButton(): "" | "<div class=\"iv-button-zoom--out\" role=\"button\"></div>";
     get imageViewHtml(): string;
-    constructor(element: any, options?: {});
+    /**
+     * Data will be passed to the callback registered with each new instance
+     */
+    get _callbackData(): {
+        container: HTMLElement;
+        snapView: HTMLElement;
+        zoomValue: number;
+        reachedMin: boolean;
+        reachedMax: boolean;
+        instance: ImageViewer;
+    };
     _findContainerAndImageSrc(element: any): {
         container: any;
         domElement: any;
@@ -60,16 +72,5 @@ declare class ImageViewer {
     refresh: () => void;
     load(imageSrc: string, hiResImageSrc: string): void;
     destroy(): void;
-    /**
-     * Data will be passed to the callback registered with each new instance
-     */
-    get _callbackData(): {
-        container: HTMLElement;
-        snapView: HTMLElement;
-        zoomValue: number;
-        reachedMin: boolean;
-        reachedMax: boolean;
-        instance: ImageViewer;
-    };
 }
 export default ImageViewer;

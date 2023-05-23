@@ -106,6 +106,7 @@ const viewer = new ImageViewer(element, {
     onInit: callback(data), // called when the instance is initiated 
     onDestroy: callback(), // called when the instance is destroyed
     onImageLoaded: callback(data), // called on image load
+    onImageError: callback(data), // called on image load failed
     onZoomChange: callback(data), // called on zoom in/out
   } 
 });
