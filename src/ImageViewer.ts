@@ -797,8 +797,6 @@ class ImageViewer {
       // calculate the dimension
       this._calculateDimensions();
 
-
-      console.log(this._listeners.onImageLoaded, 'this._listeners.onImageLoaded')
       // dispatch image load event
       if (this._listeners.onImageLoaded) {
         this._listeners.onImageLoaded(this._callbackData);
@@ -811,7 +809,6 @@ class ImageViewer {
 
 
     const onImageError = (e: any) => {
-      console.log(e, 'error', this._listeners.onImageError)
       css(ivLoader, {display: 'none'});
       if (this._listeners.onImageError) {
         this._listeners.onImageError(e);
