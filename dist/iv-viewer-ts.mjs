@@ -280,13 +280,13 @@ class H {
         const { snapImageDim: o } = this._state, { snapSlider: l } = this._sliders, a = this._getImageCurrentDim();
         this._clearFrames();
         let h, c, u;
-        const d = s[1].x - s[0].x, g = s[1].y - s[0].y, _ = () => {
-          h <= 60 && (this._frames.sliderMomentumFrame = requestAnimationFrame(_)), c += C(h, d / 3, -d / 3, 60), u += C(h, g / 3, -g / 3, 60), l.onMove(null, {
+        const d = s[1].x - s[0].x, f = s[1].y - s[0].y, _ = () => {
+          h <= 60 && (this._frames.sliderMomentumFrame = requestAnimationFrame(_)), c += C(h, d / 3, -d / 3, 60), u += C(h, f / 3, -f / 3, 60), l.onMove(null, {
             dx: -(c * o.w / a.w),
             dy: -(u * o.h / a.h)
           }), h++;
         };
-        (Math.abs(d) > 30 || Math.abs(g) > 30) && (h = 1, c = n.dx, u = n.dy, _());
+        (Math.abs(d) > 30 || Math.abs(f) > 30) && (h = 1, c = n.dx, u = n.dy, _());
       }
     });
     r.init(), this._sliders.imageSlider = r;
@@ -300,16 +300,16 @@ class H {
       isSliderEnabled: () => this._state.loaded,
       onStart: () => {
         const { slideMomentumCheck: r, sliderMomentumFrame: o } = this._frames;
-        t = parseFloat(m(e, "top")), s = parseFloat(m(e, "left")), clearInterval(r), typeof o == "number" && cancelAnimationFrame(o);
+        t = parseFloat(m(e, "top")), s = parseFloat(m(e, "left")), r && clearInterval(r), typeof o == "number" && cancelAnimationFrame(o);
       },
       onMove: (r, o) => {
         const { snapHandleDim: l, snapImageDim: a } = this._state, { image: h } = this._elements, c = this._getImageCurrentDim();
         if (!l)
           return;
-        const u = Math.max(a.w - l.w, s), d = Math.max(a.h - l.h, t), g = Math.min(0, s), _ = Math.min(0, t), p = W(s + o.dx, g, u), f = W(t + o.dy, _, d), w = -p * c.w / a.w, y = -f * c.h / a.h;
+        const u = Math.max(a.w - l.w, s), d = Math.max(a.h - l.h, t), f = Math.min(0, s), _ = Math.min(0, t), p = W(s + o.dx, f, u), g = W(t + o.dy, _, d), w = -p * c.w / a.w, y = -g * c.h / a.h;
         m(e, {
           left: `${p}px`,
-          top: `${f}px`
+          top: `${g}px`
         }), m(h, {
           left: `${w}px`,
           top: `${y}px`
@@ -369,13 +369,13 @@ class H {
       const c = t.getBoundingClientRect(), u = O(n.touches), d = {
         x: (h.pageX + a.pageX) / 2 - (c.left + document.body.scrollLeft),
         y: (h.pageY + a.pageY) / 2 - (c.top + document.body.scrollTop)
-      }, g = (p) => {
-        const f = O(p.touches), w = o + (f - u) / 2;
+      }, f = (p) => {
+        const g = O(p.touches), w = o + (g - u) / 2;
         this.zoom(w, d);
       }, _ = (p) => {
         l.pinchMove && l.pinchMove(), l.pinchEnd && l.pinchEnd(), this._state.zooming = !1, p.touches.length === 1 && this._sliders.imageSlider.startHandler(p);
       };
-      l.pinchMove && l.pinchMove(), l.pinchEnd && l.pinchEnd(), l.pinchMove = v(document, "touchmove", g), l.pinchEnd = v(document, "touchend", _);
+      l.pinchMove && l.pinchMove(), l.pinchEnd && l.pinchEnd(), l.pinchMove = v(document, "touchmove", f), l.pinchEnd = v(document, "touchend", _);
     };
     this._events.pinchStart = v(e, "touchstart", s);
   }
@@ -390,10 +390,10 @@ class H {
       const h = Math.max(-1, Math.min(1, o.wheelDelta || -o.detail || -o.deltaY)), c = a * (100 + h * 15) / 100;
       if (c >= 100 && c <= e.maxZoom ? n = 0 : n += Math.abs(h), o.preventDefault(), n > 5)
         return;
-      const u = t.getBoundingClientRect(), d = (o.pageX || o.pageX) - (u.left + document.body.scrollLeft), g = (o.pageY || o.pageY) - (u.top + document.body.scrollTop);
+      const u = t.getBoundingClientRect(), d = (o.pageX || o.pageX) - (u.left + document.body.scrollLeft), f = (o.pageY || o.pageY) - (u.top + document.body.scrollTop);
       this.zoom(c, {
         x: d,
-        y: g
+        y: f
       }), this.showSnapView();
     };
     this._ev = v(s, "wheel", r);
@@ -433,8 +433,8 @@ class H {
     c.src = String(s), this._state.loaded = !1, this._elements.image = c, this._elements.snapImage = h, m(a, { display: "block" }), m(c, { visibility: "hidden" }), this.hideSnapView();
     const u = () => {
       m(a, { display: "none" }), m(c, { visibility: "visible" }), n && this._loadHighResImage(n), this._state.loaded = !0, this._calculateDimensions(), this._listeners.onImageLoaded && this._listeners.onImageLoaded(this._callbackData), this.resetZoom();
-    }, d = (g) => {
-      m(a, { display: "none" }), this._listeners.onImageError && this._listeners.onImageError(g);
+    }, d = (f) => {
+      m(a, { display: "none" }), this._listeners.onImageError && this._listeners.onImageError(f);
     };
     A(c) ? u() : (this._events.imageLoad = v(c, "load", u), this._events.imageError = v(c, "error", d));
   }
@@ -458,19 +458,19 @@ class H {
       w: a,
       h
     };
-    const d = e.naturalWidth || o, g = e.naturalHeight || l, _ = d / g, p = d > g && h >= a || _ * h > a ? a : _ * h, f = p / _;
+    const d = e.naturalWidth || o, f = e.naturalHeight || l, _ = d / f, p = d > f && h >= a || _ * h > a ? a : _ * h, g = p / _;
     this._state.imageDim = {
       w: p,
-      h: f
+      h: g
     }, m(e, {
       width: `${p}px`,
-      height: `${f}px`,
+      height: `${g}px`,
       left: `${(a - p) / 2}px`,
-      top: `${(h - f) / 2}px`,
+      top: `${(h - g) / 2}px`,
       maxWidth: "none",
       maxHeight: "none"
     });
-    const w = p > f ? c : p * u / f, y = f > p ? u : f * c / p;
+    const w = p > g ? c : p * u / g, y = g > p ? u : g * c / p;
     this._state.snapImageDim = {
       w,
       h: y
@@ -491,14 +491,14 @@ class H {
       x: a.w / 2,
       y: a.h / 2
     };
-    const g = parseFloat(m(c, "left")), _ = parseFloat(m(c, "top"));
+    const f = parseFloat(m(c, "left")), _ = parseFloat(m(c, "top"));
     this._clearFrames();
     let p = 0;
-    const f = (a.w - l.w) / 2, w = (a.h - l.h) / 2, y = a.w - f, E = a.h - w, V = () => {
+    const g = (a.w - l.w) / 2, w = (a.h - l.h) / 2, y = a.w - g, E = a.h - w, V = () => {
       p++, p < 16 && (this._frames.zoomFrame = requestAnimationFrame(V));
       const x = C(p, o, e - o, 16), N = x / o, M = l.w * x / 100, I = l.h * x / 100;
-      let S = -((t.x - g) * N - t.x), z = -((t.y - _) * N - t.y);
-      S = Math.min(S, f), z = Math.min(z, w), S + M < y && (S = y - M), z + I < E && (z = E - I), m(c, {
+      let S = -((t.x - f) * N - t.x), z = -((t.y - _) * N - t.y);
+      S = Math.min(S, g), z = Math.min(z, w), S + M < y && (S = y - M), z + I < E && (z = E - I), m(c, {
         height: `${I}px`,
         width: `${M}px`,
         left: `${S}px`,
@@ -511,10 +511,10 @@ class H {
   };
   _clearFrames = () => {
     const { slideMomentumCheck: e, sliderMomentumFrame: t, zoomFrame: s } = this._frames;
-    clearInterval(e), typeof t == "number" && cancelAnimationFrame(t), typeof s == "number" && cancelAnimationFrame(s);
+    e && clearInterval(e), typeof t == "number" && cancelAnimationFrame(t), typeof s == "number" && cancelAnimationFrame(s);
   };
   _resizeSnapHandle = (e, t, s, n) => {
-    const { _elements: r, _state: o } = this, { snapHandle: l, image: a } = r, { imageDim: h, containerDim: c, zoomValue: u, snapImageDim: d } = o, g = e || h.w * u / 100, _ = t || h.h * u / 100, p = s || parseFloat(m(a, "left")), f = n || parseFloat(m(a, "top")), w = -p * d.w / g, y = -f * d.h / _, E = c.w * d.w / g, V = c.h * d.h / _;
+    const { _elements: r, _state: o } = this, { snapHandle: l, image: a } = r, { imageDim: h, containerDim: c, zoomValue: u, snapImageDim: d } = o, f = e || h.w * u / 100, _ = t || h.h * u / 100, p = s || parseFloat(m(a, "left")), g = n || parseFloat(m(a, "top")), w = -p * d.w / f, y = -g * d.h / _, E = c.w * d.w / f, V = c.h * d.h / _;
     m(l, {
       top: `${y}px`,
       left: `${w}px`,

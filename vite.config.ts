@@ -5,7 +5,7 @@ import dts from 'vite-plugin-dts';
 export default defineConfig({
   plugins: [
     dts({
-      outputDir: 'dist/types', // 원하는 폴더로 변경하세요
+      outDir: 'dist/types', // 원하는 폴더로 변경하세요
     }),
   ],
   resolve: {

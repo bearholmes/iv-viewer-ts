@@ -67,7 +67,7 @@ class ImageViewer {
     snapSlider?: any; imageSlider?: any; zoomSlider?: any;
   };
   private _frames: {
-    slideMomentumCheck?: NodeJS.Timer;
+    slideMomentumCheck?: NodeJS.Timeout;
     zoomFrame?: number;
     snapViewTimeout?: NodeJS.Timeout;
     sliderMomentumFrame?: number;
@@ -413,7 +413,7 @@ class ImageViewer {
 
 
         // stop momentum on image
-        clearInterval(slideMomentumCheck);
+        if(slideMomentumCheck) clearInterval(slideMomentumCheck);
         if (typeof sliderMomentumFrame === "number") {
           cancelAnimationFrame(sliderMomentumFrame);
         }
@@ -1043,15 +1043,17 @@ class ImageViewer {
   };
 
   _clearFrames = () => {
-    const {slideMomentumCheck, sliderMomentumFrame, zoomFrame} = this._frames;
-    clearInterval(slideMomentumCheck);
-    if (typeof sliderMomentumFrame === "number") {
+    const { slideMomentumCheck, sliderMomentumFrame, zoomFrame } = this._frames;
+
+    if(slideMomentumCheck) clearInterval(slideMomentumCheck);
+    if (typeof sliderMomentumFrame === 'number') {
       cancelAnimationFrame(sliderMomentumFrame);
     }
-    if (typeof zoomFrame === "number") {
+    if (typeof zoomFrame === 'number') {
       cancelAnimationFrame(zoomFrame);
     }
   };
+
 
   _resizeSnapHandle = (imgWidth: number, imgHeight: number, imgLeft: number, imgTop: number) => {
     const {_elements, _state} = this;
