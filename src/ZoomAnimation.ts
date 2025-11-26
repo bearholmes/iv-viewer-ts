@@ -100,7 +100,7 @@ export class ZoomAnimation {
       step,
       this.currentZoom,
       this.targetZoom - this.currentZoom,
-      this.totalFrames
+      this.totalFrames,
     );
 
     // Calculate new dimensions at target zoom
@@ -148,7 +148,7 @@ export class ZoomAnimation {
   private constrainToBounds(
     position: { left: number; top: number },
     width: number,
-    height: number
+    height: number,
   ): { left: number; top: number } {
     let { left, top } = position;
     const { baseLeft, baseTop, baseRight, baseBottom } = this.bounds;

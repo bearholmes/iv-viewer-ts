@@ -39,7 +39,7 @@ export class DimensionCalculator {
   static calculateFittedImageDimensions(
     containerDim: Dimensions,
     naturalWidth: number,
-    naturalHeight: number
+    naturalHeight: number,
   ): Dimensions {
     const ratio = naturalWidth / naturalHeight;
 
@@ -106,7 +106,7 @@ export class DimensionCalculator {
   static calculateSnapHandleDimensions(
     containerDim: Dimensions,
     imageDim: Dimensions,
-    snapImageDim: Dimensions
+    snapImageDim: Dimensions,
   ): Dimensions {
     // Snap handle represents the visible viewport area relative to the full image
     const handleWidth =

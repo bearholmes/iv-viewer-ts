@@ -31,7 +31,7 @@ export class ImageLoader {
   constructor(
     private elements: Partial<ViewerElements>,
     private onLoadSuccess: (loadId: number) => void,
-    private onLoadError: (loadId: number, error: Event | ErrorEvent) => void
+    private onLoadError: (loadId: number, error: Event | ErrorEvent) => void,
   ) {}
 
   /**
@@ -190,10 +190,11 @@ export class ImageLoader {
     }
 
     // Create snap view image
+    const firstChild = snapImageWrap.firstChild;
     const snapImage = createElement({
       tagName: 'img',
       className: 'iv-snap-image',
-      insertBefore: snapImageWrap.firstChild,
+      ...(firstChild ? { insertBefore: firstChild } : {}),
       parent: snapImageWrap,
     });
     (snapImage as HTMLImageElement).src = imageSrc;

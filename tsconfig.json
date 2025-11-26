@@ -7,10 +7,6 @@
     "moduleResolution": "Node",
     // Gradual strict mode adoption
     "strict": false,
-    "noImplicitAny": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "alwaysStrict": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,

@@ -73,7 +73,7 @@ export class MomentumCalculator {
     step: number,
     startPos: { dx: number; dy: number },
     delta: MomentumDelta,
-    config: MomentumConfig
+    config: MomentumConfig,
   ): MomentumFrame {
     const { xDiff, yDiff } = delta;
     const { velocityFactor, animationFrames } = config;
@@ -83,14 +83,14 @@ export class MomentumCalculator {
       step,
       xDiff * velocityFactor,
       -xDiff * velocityFactor,
-      animationFrames
+      animationFrames,
     );
 
     const yOffset = easeOutQuart(
       step,
       yDiff * velocityFactor,
       -yDiff * velocityFactor,
-      animationFrames
+      animationFrames,
     );
 
     return {
@@ -110,7 +110,7 @@ export class MomentumCalculator {
   static convertToSnapCoordinates(
     position: { x: number; y: number },
     imageDim: { w: number; h: number },
-    snapImageDim: { w: number; h: number }
+    snapImageDim: { w: number; h: number },
   ): { dx: number; dy: number } {
     // Prevent division by zero
     const dx = imageDim.w !== 0 ? -(position.x * snapImageDim.w) / imageDim.w : 0;

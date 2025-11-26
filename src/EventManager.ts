@@ -45,7 +45,7 @@ export class EventManager {
     name: string,
     target: EventTarget,
     eventType: string | string[],
-    handler: EventListener
+    handler: EventListener,
   ): EventRemover {
     // Remove existing listener with same name if present
     this.off(name);

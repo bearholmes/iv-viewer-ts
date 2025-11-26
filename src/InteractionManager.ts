@@ -41,7 +41,7 @@ export class InteractionManager {
     private elements: InteractionElements,
     private eventManager: EventManager,
     private options: InteractionOptions,
-    private callbacks: InteractionCallbacks
+    private callbacks: InteractionCallbacks,
   ) {}
 
   /**
@@ -218,7 +218,7 @@ export class InteractionManager {
     touch0: Touch,
     touch1: Touch,
     containerOffset: DOMRect,
-    scroll: { x: number; y: number }
+    scroll: { x: number; y: number },
   ): { x: number; y: number } {
     return {
       x: (touch1.pageX + touch0.pageX) / 2 - (containerOffset.left + scroll.x),
@@ -232,7 +232,7 @@ export class InteractionManager {
   private calculatePinchZoom(
     startZoomValue: number,
     startDist: number,
-    currentDist: number
+    currentDist: number,
   ): number {
     return startZoomValue + (currentDist - startDist) / 2;
   }
@@ -252,7 +252,7 @@ export class InteractionManager {
    */
   private getMousePositionRelativeToContainer(
     e: { pageX: number; pageY: number },
-    containerOffset: DOMRect
+    containerOffset: DOMRect,
   ): { x: number; y: number } {
     const scroll = this.callbacks.getScrollPosition();
     return {

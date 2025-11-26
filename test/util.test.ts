@@ -61,6 +61,7 @@ describe('util functions', () => {
       const div = createElement({
         tagName: 'div',
         html: '<div class="iv-test">Valid</div>',
+        trustedHTML: true,
         parent: container,
       });
       // isStaticLibraryHTML should allow iv- prefixed classes

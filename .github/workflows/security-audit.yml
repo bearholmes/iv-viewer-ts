@@ -2,9 +2,9 @@ name: Security Audit
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, next]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, next]
   schedule:
     # 매주 월요일 오전 9시 (KST) 실행
     - cron: '0 0 * * 1'
@@ -14,6 +14,8 @@ jobs:
   audit:
     name: NPM Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -42,6 +44,8 @@ jobs:
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: github.event_name == 'pull_request'
 
     steps:

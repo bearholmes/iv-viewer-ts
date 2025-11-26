@@ -24,6 +24,7 @@
     "url": "https://github.com/bearholmes/iv-viewer-ts/issues"
   },
   "homepage": "https://github.com/bearholmes/iv-viewer-ts#readme",
+  "packageManager": "npm@10.7.0",
   "scripts": {
     "build": "vite build && tsc",
     "lint": "eslint src/**/*.ts",

@@ -4,7 +4,7 @@ class Slider {
   private _onStart: (event: Event, position: { x: number; y: number }) => void;
   private _onMove: (
     event: Event,
-    position: { dx: number; dy: number; mx: number; my: number }
+    position: { dx: number; dy: number; mx: number; my: number },
   ) => void;
   private _onEnd: () => void;
   private isSliderEnabled: () => boolean;
@@ -37,7 +37,7 @@ class Slider {
       onMove: (event: Event, position: { dx: number; dy: number; mx: number; my: number }) => void;
       onEnd: () => void;
       isSliderEnabled?: () => boolean;
-    }
+    },
   ) {
     // REFACTOR: Runtime validation for required callbacks (Issue E2.7)
     if (typeof onStart !== 'function') {

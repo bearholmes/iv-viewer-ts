@@ -29,11 +29,12 @@ class FullScreenViewer extends ImageViewer {
       tagName: 'div',
       className: FULLSCREEN_SELECTORS.FULLSCREEN,
       html: fullScreenHtml,
+      trustedHTML: true,
       parent: document.body,
     });
 
     const container = fullScreenElem.querySelector(
-      `.${FULLSCREEN_SELECTORS.CONTAINER}`
+      `.${FULLSCREEN_SELECTORS.CONTAINER}`,
     ) as HTMLElement;
     if (!container) {
       throw new Error('Fullscreen container element not found');

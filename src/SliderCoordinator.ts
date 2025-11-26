@@ -29,7 +29,7 @@ export class SliderCoordinator {
     config: {
       getImageDim: () => { w: number; h: number };
       getSnapImageDim: () => { w: number; h: number };
-    }
+    },
   ) {
     this.snapSlider = snapSlider;
     this.getImageDim = config.getImageDim;

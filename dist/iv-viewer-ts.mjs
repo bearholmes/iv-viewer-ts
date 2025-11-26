@@ -39,6 +39,9 @@ function createElement(options) {
   const elem = document.createElement(options.tagName);
   if (options.id) elem.id = options.id;
   if (options.html) {
+    if (!options.trustedHTML) {
+      throw new Error("innerHTML requires trustedHTML=true to avoid XSS risks");
+    }
     elem.innerHTML = options.html;
   }
   if (options.className) elem.className = options.className;
@@ -110,7 +113,12 @@ function setStyle(elements, properties) {
     if (element instanceof HTMLElement) {
       Object.keys(properties).forEach((key) => {
         const value = properties[key];
-        const sanitizedValue = String(value).replace(/[<>'"]/g, "");
+        const stringValue = String(value);
+        const lower = stringValue.toLowerCase();
+        if (lower.includes("javascript:") || lower.includes("expression(")) {
+          throw new Error("Blocked unsafe CSS value");
+        }
+        const sanitizedValue = stringValue.replace(/[<>'"]/g, "");
         element.style.setProperty(key, sanitizedValue);
       });
     }
@@ -619,12 +627,13 @@ class ImageLoader {
     if (!snapImageWrap || !imageWrap) {
       throw new Error("Image wrap elements not found");
     }
-    const snapImage = createElement({
+    const firstChild = snapImageWrap.firstChild;
+    const snapImage = createElement(__spreadProps(__spreadValues({
       tagName: "img",
-      className: "iv-snap-image",
-      insertBefore: snapImageWrap.firstChild,
+      className: "iv-snap-image"
+    }, firstChild ? { insertBefore: firstChild } : {}), {
       parent: snapImageWrap
-    });
+    }));
     snapImage.src = imageSrc;
     const image = createElement({
       tagName: "img",
@@ -909,6 +918,7 @@ class ImageViewerDOM {
       tagName: "div",
       className: "iv-wrap",
       html: imageViewHtml,
+      trustedHTML: true,
       parent: container
     });
     addClass(container, "iv-container");
@@ -1330,7 +1340,15 @@ const _ImageViewer = class _ImageViewer {
     this._frames = {};
     this._sliders = {};
     this._state = {
-      zoomValue: this._options.zoomValue
+      zoomValue: this._options.zoomValue,
+      loaded: false,
+      imageDim: { w: 0, h: 0 },
+      containerDim: { w: 0, h: 0 },
+      snapImageDim: { w: 0, h: 0 },
+      zooming: false,
+      snapViewVisible: false,
+      zoomSliderLength: 0,
+      snapHandleDim: { w: 0, h: 0 }
     };
     this._images = {
       imageSrc,
@@ -2121,11 +2139,11 @@ ImageViewer.defaults = {
   hasZoomButtons: false,
   zoomStep: 50,
   listeners: {
-    onInit: null,
-    onDestroy: null,
-    onImageLoaded: null,
-    onZoomChange: null,
-    onImageError: null
+    onInit: void 0,
+    onDestroy: void 0,
+    onImageLoaded: void 0,
+    onZoomChange: void 0,
+    onImageError: void 0
   }
 };
 const FULLSCREEN_SELECTORS = {
@@ -2153,6 +2171,7 @@ class FullScreenViewer extends ImageViewer {
       tagName: "div",
       className: FULLSCREEN_SELECTORS.FULLSCREEN,
       html: fullScreenHtml,
+      trustedHTML: true,
       parent: document.body
     });
     const container = fullScreenElem.querySelector(

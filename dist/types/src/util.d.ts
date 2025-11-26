@@ -40,6 +40,8 @@ interface CreateElementOptions {
     tagName: string;
     id?: string;
     html?: string;
+    /** Set to true only for static, trusted markup defined in source code */
+    trustedHTML?: boolean;
     className?: string;
     src?: string;
     style?: Record<string, string>;

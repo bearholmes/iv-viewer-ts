@@ -33,7 +33,7 @@ export class ImageViewerDOM {
   initialize(
     element: string | HTMLElement,
     imageViewHtml: string,
-    validateImageUrl: (url: string | null | undefined, context: string) => string | null
+    validateImageUrl: (url: string | null | undefined, context: string) => string | null,
   ): {
     container: HTMLElement;
     domElement: HTMLElement;
@@ -140,7 +140,7 @@ export class ImageViewerDOM {
    */
   private _processImgElement(
     imgElement: HTMLImageElement,
-    validateImageUrl: (url: string | null | undefined, context: string) => string | null
+    validateImageUrl: (url: string | null | undefined, context: string) => string | null,
   ): {
     container: HTMLElement;
     imageSrc: string | undefined;
@@ -179,7 +179,7 @@ export class ImageViewerDOM {
    */
   private _extractImageSourcesFromContainer(
     containerElement: HTMLElement,
-    validateImageUrl: (url: string | null | undefined, context: string) => string | null
+    validateImageUrl: (url: string | null | undefined, context: string) => string | null,
   ): {
     imageSrc: string | undefined;
     hiResImageSrc: string | undefined;
@@ -206,6 +206,7 @@ export class ImageViewerDOM {
       tagName: 'div',
       className: 'iv-wrap',
       html: imageViewHtml,
+      trustedHTML: true,
       parent: container,
     });
 

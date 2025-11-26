@@ -28,7 +28,7 @@ export function easeOutQuart(
   currentTime: number,
   startValue: number,
   changedValue: number,
-  duration: number
+  duration: number,
 ): number {
   currentTime /= duration;
   currentTime -= 1;
@@ -64,6 +64,8 @@ interface CreateElementOptions {
   tagName: string;
   id?: string;
   html?: string;
+  /** Set to true only for static, trusted markup defined in source code */
+  trustedHTML?: boolean;
   className?: string;
   src?: string;
   style?: Record<string, string>; // REFACTOR: Changed from string to object for consistency (Issue C3.8)
@@ -93,8 +95,11 @@ export function createElement(options: CreateElementOptions) {
   const elem = document.createElement(options.tagName);
   if (options.id) elem.id = options.id;
 
-  // SECURITY WARNING: innerHTML without sanitization - only use with trusted static content!
+  // SECURITY: Only allow innerHTML when explicitly marked as trusted static markup
   if (options.html) {
+    if (!options.trustedHTML) {
+      throw new Error('innerHTML requires trustedHTML=true to avoid XSS risks');
+    }
     elem.innerHTML = options.html;
   }
 
@@ -157,7 +162,7 @@ export function imageLoaded(img: HTMLImageElement): boolean {
 }
 
 export function toArray(
-  list: Node | NodeList | HTMLCollectionOf<HTMLElement>
+  list: Node | NodeList | HTMLCollectionOf<HTMLElement>,
 ): (HTMLCollectionOf<Element> | Element)[] {
   if (list instanceof HTMLElement) {
     return [list];
@@ -240,16 +245,25 @@ export function parseStyleFloat(element: HTMLElement, property: string, defaultV
  */
 export function setStyle(
   elements: Node | NodeList | HTMLCollectionOf<HTMLElement>,
-  properties: Record<string, string>
+  properties: Record<string, string>,
 ): void {
   const elmArray = toArray(elements);
 
   elmArray.forEach((element) => {
     if (element instanceof HTMLElement) {
       Object.keys(properties).forEach((key: string) => {
-        // SECURITY FIX: Sanitize CSS values to prevent CSS injection
         const value = properties[key];
-        const sanitizedValue = String(value).replace(/[<>'"]/g, '');
+        const stringValue = String(value);
+
+        // SECURITY: Block obvious scriptable CSS payloads
+        const lower = stringValue.toLowerCase();
+        if (lower.includes('javascript:') || lower.includes('expression(')) {
+          throw new Error('Blocked unsafe CSS value');
+        }
+
+        // Basic sanitization to strip angle/quote characters from inline CSS values
+        const sanitizedValue = stringValue.replace(/[<>'"]/g, '');
+
         element.style.setProperty(key, sanitizedValue);
       });
     }
@@ -264,7 +278,7 @@ export function setStyle(
  */
 export function css(
   elements: Node | NodeList | HTMLCollectionOf<HTMLElement>,
-  properties: string | Record<string, string>
+  properties: string | Record<string, string>,
 ): string | undefined {
   if (typeof properties === 'string') {
     // GET operation - delegate to getStyle
@@ -309,7 +323,7 @@ export function wrap(
     className?: string;
     id?: string;
     style?: { display?: string; overflow?: string };
-  }
+  },
 ): HTMLElement {
   const wrapper = document.createElement(tag);
   if (className) wrapper.className = className;
@@ -367,17 +381,17 @@ export function clamp(num: number, min: number, max: number): number {
 export function assignEvent<K extends keyof HTMLElementEventMap>(
   element: EventTarget,
   events: K | K[],
-  handler: (event: HTMLElementEventMap[K]) => void
+  handler: (event: HTMLElementEventMap[K]) => void,
 ): () => void;
 export function assignEvent(
   element: EventTarget,
   events: string | string[],
-  handler: EventListener
+  handler: EventListener,
 ): () => void;
 export function assignEvent(
   element: EventTarget,
   events: string | string[],
-  handler: EventListener
+  handler: EventListener,
 ): () => void {
   const eventList = Array.isArray(events) ? events : [events];
   eventList.forEach((event) => element.addEventListener(event, handler));
@@ -406,6 +420,6 @@ export function getTouchPointsDistance(touches: TouchList): number {
   const touch0 = touches[0];
   const touch1 = touches[1];
   return Math.sqrt(
-    Math.pow(touch1.pageX - touch0.pageX, 2) + Math.pow(touch1.pageY - touch0.pageY, 2)
+    Math.pow(touch1.pageX - touch0.pageX, 2) + Math.pow(touch1.pageY - touch0.pageY, 2),
   );
 }

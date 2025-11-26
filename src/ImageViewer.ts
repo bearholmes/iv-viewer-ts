@@ -39,10 +39,10 @@ class ImageViewer {
   private static readonly ZOOM_ANIMATION_FRAMES = 16;
   private static readonly SNAP_VIEW_TIMEOUT_MS = 1500;
 
-  private _elements: Partial<ViewerElements>; // REFACTOR: Changed from protected to private (Issue E2.1)
+  private _elements: ViewerElements; // REFACTOR: Changed from protected to private (Issue E2.1)
   private _options: Required<ImageViewerOptions>;
   private _listeners: ImageViewerListeners;
-  private _state: Partial<ViewerState>;
+  private _state: ViewerState;
   private _sliders: {
     snapSlider?: Slider;
     imageSlider?: Slider;
@@ -79,11 +79,11 @@ class ImageViewer {
     const { domElement, imageSrc, hiResImageSrc, elements } = this.dom.initialize(
       element,
       ViewerHTMLTemplates.createViewerHTML(this._options.hasZoomButtons),
-      (url, context) => this._validateImageUrl(url, context as 'main' | 'hiRes')
+      (url, context) => this._validateImageUrl(url, context as 'main' | 'hiRes'),
     );
 
     // Store element references
-    this._elements = elements;
+    this._elements = elements as ViewerElements;
 
     // P3-5 FIX: Explicit null checking pattern for optional properties
     this._listeners =
@@ -100,6 +100,14 @@ class ImageViewer {
     // maintain current state
     this._state = {
       zoomValue: this._options.zoomValue,
+      loaded: false,
+      imageDim: { w: 0, h: 0 },
+      containerDim: { w: 0, h: 0 },
+      snapImageDim: { w: 0, h: 0 },
+      zooming: false,
+      snapViewVisible: false,
+      zoomSliderLength: 0,
+      snapHandleDim: { w: 0, h: 0 },
     };
 
     this._images = {
@@ -111,7 +119,7 @@ class ImageViewer {
     this.imageLoader = new ImageLoader(
       this._elements,
       (loadId) => this._handleImageLoadSuccess(loadId),
-      (loadId, error) => this._handleImageLoadError(loadId, error)
+      (loadId, error) => this._handleImageLoadError(loadId, error),
     );
 
     // REFACTOR: Initialize EventManager for centralized event management (Issue A1.5)
@@ -142,7 +150,7 @@ class ImageViewer {
         showSnapView: () => this.showSnapView(),
         getSlider: (key) => this._getSlider(key as 'imageSlider' | 'snapSlider' | 'zoomSlider'),
         getScrollPosition: () => this._getScrollPosition(),
-      }
+      },
     );
 
     this._init();
@@ -235,7 +243,7 @@ class ImageViewer {
 
   protected _setElement<K extends keyof ViewerElements>(
     key: K,
-    element: ViewerElements[K] | undefined
+    element: ViewerElements[K] | undefined,
   ): void {
     this._elements[key] = element;
   }
@@ -249,7 +257,7 @@ class ImageViewer {
 
   private _setSlider<K extends keyof typeof this._sliders>(
     key: K,
-    slider: (typeof this._sliders)[K]
+    slider: (typeof this._sliders)[K],
   ): void {
     this._sliders[key] = slider;
   }
@@ -263,7 +271,10 @@ class ImageViewer {
   }
 
   // REFACTOR: Extract duplicated URL validation logic (Issue A1.4)
-  private _validateImageUrl(url: string | null, urlType: 'main' | 'hiRes' = 'main'): string | null {
+  private _validateImageUrl(
+    url: string | null | undefined,
+    urlType: 'main' | 'hiRes' = 'main',
+  ): string | null {
     if (!url) return null;
 
     if (!isValidImageUrl(url)) {
@@ -326,7 +337,7 @@ class ImageViewer {
     currentPos: { dx: number; dy: number },
     imageCurrentDim: { w: number; h: number },
     snapImageDim: { w: number; h: number },
-    snapSlider: Slider
+    snapSlider: Slider,
   ): void {
     let step = 1;
     let cumulativeX = 0;
@@ -344,7 +355,7 @@ class ImageViewer {
         step,
         { dx: cumulativeX, dy: cumulativeY },
         { xDiff, yDiff },
-        config
+        config,
       );
 
       if (frame.shouldContinue) {
@@ -362,7 +373,7 @@ class ImageViewer {
       const snapCoords = MomentumCalculator.convertToSnapCoordinates(
         { x: finalPosX, y: finalPosY },
         imageCurrentDim,
-        snapImageDim
+        snapImageDim,
       );
 
       // REFACTOR: Use updatePosition instead of dummy event (Issue A1.12)
@@ -482,7 +493,7 @@ class ImageViewer {
             currentPos,
             imageCurrentDim,
             snapImageDim,
-            snapSlider
+            snapSlider,
           );
         }
       },
@@ -511,7 +522,7 @@ class ImageViewer {
     startTop: number,
     delta: { dx: number; dy: number },
     snapHandleDim: { w: number; h: number },
-    snapImageDim: { w: number; h: number }
+    snapImageDim: { w: number; h: number },
   ): { left: number; top: number } {
     // BUG-1 FIX: Correct boundary logic for snap handle positioning
     // Handle can move within the snap image bounds
@@ -536,7 +547,7 @@ class ImageViewer {
   private _convertSnapToImagePosition(
     snapPosition: { left: number; top: number },
     imageCurrentDim: { w: number; h: number },
-    snapImageDim: { w: number; h: number }
+    snapImageDim: { w: number; h: number },
   ): { left: number; top: number } {
     // P2-6 FIX: Prevent division by zero
     const left =
@@ -583,7 +594,7 @@ class ImageViewer {
           startHandleTop,
           position,
           snapHandleDim,
-          snapImageDim
+          snapImageDim,
         );
 
         // Convert snap position to main image position (use helper)
@@ -824,7 +835,7 @@ class ImageViewer {
     const imageDim = DimensionCalculator.calculateFittedImageDimensions(
       { w: contWidth, h: contHeight },
       imgOriginWidth,
-      imgOriginHeight
+      imgOriginHeight,
     );
     this._setImageDim(imageDim);
 
@@ -1069,7 +1080,7 @@ class ImageViewer {
       // Auto-hide snap view after timeout
       this._frames.snapViewTimeout = setTimeout(
         () => this.hideSnapView(),
-        ImageViewer.SNAP_VIEW_TIMEOUT_MS
+        ImageViewer.SNAP_VIEW_TIMEOUT_MS,
       );
     }
   }
@@ -1188,11 +1199,11 @@ ImageViewer.defaults = {
   hasZoomButtons: false,
   zoomStep: 50,
   listeners: {
-    onInit: null,
-    onDestroy: null,
-    onImageLoaded: null,
-    onZoomChange: null,
-    onImageError: null,
+    onInit: undefined,
+    onDestroy: undefined,
+    onImageLoaded: undefined,
+    onZoomChange: undefined,
+    onImageError: undefined,
   },
 };
 
