@@ -8,6 +8,7 @@ import {
   remove,
   unwrap,
 } from './util';
+import type { HTMLElementWithViewer } from './ImageViewer';
 import type { ViewerElements } from './types';
 
 /**
@@ -44,7 +45,7 @@ export class ImageViewerDOM {
     const domElement = this._resolveElement(element);
 
     // Check if viewer already initialized
-    if ((domElement as any)._imageViewer) {
+    if ((domElement as HTMLElementWithViewer)._imageViewer) {
       throw new Error('An image viewer is already being initiated on the element.');
     }
 

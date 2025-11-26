@@ -1,4 +1,5 @@
 import { EventManager } from './EventManager';
+import { default as Slider } from './Slider';
 /**
  * InteractionManager - User interaction handling for ImageViewer
  * Manages pinch zoom, wheel zoom, and double-tap zoom gestures
@@ -28,7 +29,7 @@ interface InteractionCallbacks {
     }) => void;
     resetZoom: () => void;
     showSnapView: () => void;
-    getSlider: (key: string) => any;
+    getSlider: (key: string) => Slider | undefined;
     getScrollPosition: () => {
         x: number;
         y: number;

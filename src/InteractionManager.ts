@@ -1,5 +1,6 @@
 import { getTouchPointsDistance, ZOOM_CONSTANT, MOUSE_WHEEL_COUNT } from './util';
 import type { EventManager } from './EventManager';
+import type Slider from './Slider';
 
 /**
  * InteractionManager - User interaction handling for ImageViewer
@@ -26,7 +27,7 @@ interface InteractionCallbacks {
   zoom: (value: number, point?: { x: number; y: number }) => void;
   resetZoom: () => void;
   showSnapView: () => void;
-  getSlider: (key: string) => any;
+  getSlider: (key: string) => Slider | undefined;
   getScrollPosition: () => { x: number; y: number };
 }
 

@@ -23,7 +23,7 @@ import Slider from './Slider';
 import FullScreenViewer from './FullScreen';
 
 // Extend HTMLElement interface to include custom _imageViewer property
-interface HTMLElementWithViewer extends HTMLElement {
+export interface HTMLElementWithViewer extends HTMLElement {
   _imageViewer?: ImageViewer | null;
 }
 

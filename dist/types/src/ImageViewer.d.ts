@@ -1,6 +1,9 @@
 import { EventManager } from './EventManager';
 import { ImageViewerOptions, ViewerElements, Dimensions } from './types';
 import { default as FullScreenViewer } from './FullScreen';
+export interface HTMLElementWithViewer extends HTMLElement {
+    _imageViewer?: ImageViewer | null;
+}
 declare class ImageViewer {
     static defaults: ImageViewerOptions;
     static FullScreenViewer: typeof FullScreenViewer;
