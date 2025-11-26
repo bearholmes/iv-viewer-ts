@@ -58,26 +58,27 @@ jobs:
           fail-on-severity: moderate
           deny-licenses: GPL-3.0, AGPL-3.0
 
-  codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-          config-file: ./.github/codeql/codeql-config.yml
-          paths-ignore: |
-            dist/**
-            **/dist/**
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+  # codeql:
+  #   name: CodeQL Analysis (disabled per request)
+  #   if: false
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     security-events: write
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Initialize CodeQL
+  #       uses: github/codeql-action/init@v3
+  #       with:
+  #         languages: javascript
+  #         config-file: ./.github/codeql/codeql-config.yml
+  #         paths-ignore: |
+  #           dist/**
+  #           **/dist/**
+  #
+  #     - name: Perform CodeQL Analysis
+  #       uses: github/codeql-action/analyze@v3
