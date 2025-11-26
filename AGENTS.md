@@ -16,7 +16,7 @@
 
 ### Package Information
 
-- **Version**: 2.1.14
+- **Version**: 2.2.0
 - **License**: MIT
 - **Main Entry**: `dist/iv-viewer-ts.js` (CommonJS)
 - **Module Entry**: `dist/iv-viewer-ts.mjs` (ES Module)
@@ -28,17 +28,15 @@
 
 ### Core Technologies
 
-- **TypeScript 5.0.2** - Type-safe JavaScript with ES2020+ target
-- **Vite 5** - Primary build tool with fast HMR
-- **Rollup** - Secondary bundler for CommonJS distribution
-- **SASS 1.59.3** - SCSS preprocessing for styles
+- **TypeScript 5.7** - Type-safe JavaScript with an ES2015 target
+- **Vite 6** - Library bundler (ES/CJS/UMD) and dev server
+- **SASS 1.83** - SCSS preprocessing for styles
 
 ### Build Tools
 
 - **vite-plugin-dts** - TypeScript declaration file generation
-- **rollup-plugin-typescript2** - TypeScript support for Rollup
-- **PostCSS 8.4.21** with Autoprefixer and cssnano
-- **ESLint 8.36.0** with TypeScript support
+- **PostCSS 8.4.49** with Autoprefixer and cssnano (minifies `dist/iv-viewer-ts.min.css`)
+- **ESLint 9** with TypeScript support
 
 ### Distribution Formats
 
@@ -54,7 +52,7 @@
 ```
 iv-viewer-ts/
 ├── src/                           # TypeScript source files
-│   ├── ImageViewer.ts            # Core viewer class (1195 lines)
+│   ├── ImageViewer.ts            # Core viewer class (~1200 lines)
 │   ├── FullScreen.ts             # Full-screen viewer extension (71 lines)
 │   ├── Slider.ts                 # Touch/mouse drag handler (131 lines)
 │   ├── util.ts                   # Utility functions
@@ -77,9 +75,7 @@ iv-viewer-ts/
 │   └── iv-viewer-ts.css          # Compiled styles
 ├── package.json                  # Project metadata
 ├── tsconfig.json                 # TypeScript config
-├── vite.config.ts                # Vite build config
-├── rollup.config.mjs             # Rollup config
-└── build-css.cjs                 # CSS build script
+└── vite.config.ts                # Vite build config and CSS pipeline
 ```
 
 ---
@@ -93,7 +89,7 @@ iv-viewer-ts/
 **Key Methods**:
 
 - `constructor(element, options)` - Initialize viewer with element or selector
-- `load(imageSrc, hiResImageSrc?)` - Load images with optional high-res version
+- `load(imageSrc, hiResImageSrc?)` - Load images with optional high-res version (reuse `imageSrc` if only one asset)
 - `zoom(percentage, point?)` - Programmatic zoom control
 - `resetZoom()` - Return to default zoom level
 - `refresh()` - Recalculate dimensions after resize
@@ -124,6 +120,8 @@ _state: {
   snapView: boolean,        // Enable snap view minimap
   refreshOnResize: boolean, // Auto-refresh on window resize
   zoomOnMouseWheel: boolean,// Enable mouse wheel zoom
+  hasZoomButtons: boolean,  // Render zoom in/out buttons (default false)
+  zoomStep: number,         // Increment for zoom buttons
   listeners: {              // Event callbacks
     onInit, onDestroy, onImageLoaded,
     onImageError, onZoomChange
@@ -185,36 +183,27 @@ _state: {
 
 ```bash
 # Primary build (Vite + TypeScript)
-npm run build           # Builds all formats + type checking
+npm run build           # Builds bundles and declarations
 
-# Secondary builds
-npm run build-cjs       # CommonJS bundle via Rollup
-npm run build-css       # Process SCSS → CSS (minified + unminified)
+# Additional checks
+npm run type-check      # Standalone TS verification
+npm run test:run        # Unit tests
 ```
 
 ### Build Pipeline
 
-**Vite Build** (`vite.config.ts`):
+**Vite Library Build** (`vite.config.ts`):
 
-1. Entry: `src/index.ts`
-2. Processes TypeScript with native Vite support
-3. Generates ES Module (`dist/iv-viewer-ts.mjs`)
-4. Generates ES Format (`dist/iv-viewer-ts.js`)
-5. Runs `tsc` for strict type checking
-6. Generates TypeScript declarations via `vite-plugin-dts`
+1. Entry: `src/index.ts` with library formats `es`, `cjs`, and `umd` (output to `dist/`)
+2. Bundles and minifies with Vite (Rollup internal pipeline) and outputs source maps
+3. Generates TypeScript declarations via `vite-plugin-dts`
+4. Emits CSS from `src/scss/build.scss` (custom `build-css` hook):
+   - `dist/iv-viewer-ts.css` via autoprefixer
+   - `dist/iv-viewer-ts.min.css` via autoprefixer + cssnano
 
-**Rollup Build** (`rollup.config.mjs`):
+**TypeScript Check** (`tsc --noEmit`):
 
-- Generates CommonJS format
-- Applies terser minification
-- Includes source maps
-
-**CSS Build** (`build-css.cjs`):
-
-1. SCSS compilation: `src/scss/build.scss` → CSS
-2. PostCSS autoprefixer for browser compatibility
-3. cssnano minification
-4. Outputs both `.css` and `.min.css`
+- Ensures the compiler configuration passes outside of the Vite build
 
 ### Development Workflow
 
@@ -222,25 +211,32 @@ npm run build-css       # Process SCSS → CSS (minified + unminified)
 2. **Style Changes**: Edit SCSS files in `src/scss/`
 3. **Build**: Run `npm run build` or individual build commands
 4. **Test**: Open `example/index.html` to test changes
-5. **Type Check**: Automatic with strict TypeScript config
+5. **Type Check**: Run `npm run type-check` to validate the TS config
 
 ---
 
 ## TypeScript Configuration
 
-### Strict Mode Settings (`tsconfig.json`)
+### Compiler Settings (`tsconfig.json`)
 
 ```json
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "strict": true,
+    "target": "es2015",
+    "useDefineForClassFields": true,
+    "module": "esnext",
+    "lib": ["dom", "es2015", "es2016", "es2017"],
+    "moduleResolution": "Node",
+    "strict": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "moduleResolution": "bundler",
-    "esModuleInterop": true
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "downlevelIteration": true
   }
 }
 ```
@@ -346,15 +342,15 @@ $snap-view-height: 150px;
 
 1. **Check**: Review `package.json` devDependencies
 2. **Update**: Modify version numbers carefully
-3. **Test**: Run `npm run build` to verify compatibility
+3. **Test**: Run `npm run build` and `npm run type-check` to verify compatibility
 4. **Verify**: Check that examples still work
 
 ### Modifying Styles
 
 1. **Edit**: Modify SCSS files in `src/scss/`
-2. **Build**: Run `npm run build-css`
+2. **Build**: Run `npm run build` (CSS emitted via Vite plugin)
 3. **Test**: Check visual changes in `example/` pages
-4. **Verify**: Ensure both minified and unminified CSS are generated
+4. **Verify**: Ensure both minified and unminified CSS are generated in `dist/`
 
 ---
 
@@ -391,12 +387,10 @@ $snap-view-height: 150px;
 
 ## Recent Changes (Git History)
 
-- **Update devDependencies** (v2.1.14)
-- **Remove console.log** statements
-- **Improve listeners**: Fix onImageLoaded event, add onImageError
-- **Fix image path** resolution for external URLs
-- **Fix CSS paths** in examples
-- **Fix horizontal overflow** issues
+- **Update devDependencies** (v2.2.0)
+- **Refine API docs**: Updated defaults (`hasZoomButtons` false) and callback payloads
+- **Clarify image loading**: `load`/`show` accept an optional hi-res URL; pass the same URL if only one asset is available
+- **Destroy cleanup**: `destroy()` now returns void
 
 ---
 
@@ -404,14 +398,14 @@ $snap-view-height: 150px;
 
 ```json
 {
-  "vite": "^5.4.11",
-  "typescript": "^5.0.2",
-  "rollup": "^4.31.0",
-  "sass": "^1.59.3",
-  "eslint": "^8.36.0",
-  "postcss": "^8.4.21",
-  "autoprefixer": "^10.4.14",
-  "cssnano": "^6.1.2"
+  "vite": "^6.0.5",
+  "typescript": "^5.7.2",
+  "sass": "^1.83.0",
+  "eslint": "^9.17.0",
+  "postcss": "^8.4.49",
+  "autoprefixer": "^10.4.20", // prefixes CSS for dist builds
+  "cssnano": "^7.0.6", // minifies dist CSS via the build-css hook
+  "vite-plugin-dts": "^4.3.0"
 }
 ```
 
@@ -424,7 +418,7 @@ $snap-view-height: 150px;
 ### When Making Changes
 
 1. **Always read files first** before modifying
-2. **Use TypeScript strict mode** - no implicit any
+2. **Prefer strict typing** - avoid implicit `any` and tighten types when touching code
 3. **Maintain backward compatibility** when possible
 4. **Follow existing patterns** in the codebase
 5. **Test in examples** before committing
@@ -445,8 +439,8 @@ Before committing, ensure:
 
 ```bash
 npm run build        # Must succeed without errors
-npm run build-cjs    # Must succeed without errors
-npm run build-css    # Must succeed without errors
+npm run type-check   # Must succeed without errors
+npm run test:run     # Must succeed without errors
 ```
 
 ---

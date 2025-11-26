@@ -235,7 +235,7 @@ declare class ImageViewer {
      * viewer.load('thumb.jpg', 'fullsize.jpg');
      * ```
      */
-    load(imageSrc: string, hiResImageSrc: string): void;
+    load(imageSrc: string, hiResImageSrc?: string): void;
     /**
      * Destroys the viewer instance and cleans up all resources
      * Removes event listeners, sliders, frames, and DOM elements

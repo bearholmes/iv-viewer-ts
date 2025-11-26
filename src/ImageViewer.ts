@@ -1135,7 +1135,7 @@ class ImageViewer {
    * viewer.load('thumb.jpg', 'fullsize.jpg');
    * ```
    */
-  load(imageSrc: string, hiResImageSrc: string) {
+  load(imageSrc: string, hiResImageSrc?: string) {
     // P3-4 FIX: Add error handling for image loading
     try {
       // REFACTOR: Use _setImageSources for validation and assignment (Issue E2.10)

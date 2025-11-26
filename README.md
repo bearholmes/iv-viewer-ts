@@ -137,7 +137,7 @@ const viewer = new ImageViewer(image);
 | `snapView`         | `boolean` | `true`  | Show mini-map navigation          |
 | `refreshOnResize`  | `boolean` | `true`  | Auto-refresh on window resize     |
 | `zoomOnMouseWheel` | `boolean` | `true`  | Enable mouse wheel zoom           |
-| `hasZoomButtons`   | `boolean` | `true`  | Show zoom in/out buttons          |
+| `hasZoomButtons`   | `boolean` | `false` | Show zoom in/out buttons          |
 | `zoomStep`         | `number`  | `50`    | Zoom increment for buttons        |
 | `listeners`        | `object`  | `{}`    | Event callbacks (see below)       |
 
@@ -206,7 +206,7 @@ const viewer = new ImageViewer(element, {
 ```typescript
 interface CallbackData {
   container: HTMLElement; // Viewer container
-  snapView: HTMLElement; // Mini-map element
+  snapView: HTMLElement | null; // Mini-map element (null when snap view is disabled)
   zoomValue: number; // Current zoom (100-500)
   reachedMin: boolean; // At minimum zoom
   reachedMax: boolean; // At maximum zoom
@@ -242,7 +242,7 @@ viewer.load('preview.jpg', 'full-resolution.jpg');
 ```
 
 - **imageSrc**: Low-resolution image (loads immediately)
-- **hiResImageSrc** _(optional)_: High-resolution image (loads progressively)
+- **hiResImageSrc** (optional): High-resolution image (loads progressively). If you don't have a separate high-res file, pass the same URL as `imageSrc`.
 
 ---
 
@@ -288,7 +288,7 @@ viewer.refresh();
 Clean up the viewer and remove all event listeners.
 
 ```typescript
-viewer = viewer.destroy(); // Returns null
+viewer.destroy();
 ```
 
 ---
@@ -316,6 +316,9 @@ Display image in fullscreen mode.
 ```typescript
 viewer.show('preview.jpg', 'full-resolution.jpg');
 ```
+
+- **imageSrc**: URL for the initial render.
+- **hiResImageSrc** (optional): High-resolution URL; reuse `imageSrc` when you don't have a separate asset.
 
 ---
 
@@ -579,9 +582,14 @@ open example/index.html
 
 ```bash
 npm run build      # Build all formats + types
-npm run build-cjs  # Build CommonJS bundle
-npm run build-css  # Build CSS from SCSS
+npm run type-check # Validate TypeScript without emitting
+npm run test:run   # Run unit tests
 ```
+
+The build also writes stylesheet outputs to `dist/`:
+
+- `iv-viewer-ts.css` (processed with Autoprefixer)
+- `iv-viewer-ts.min.css` (Autoprefixer + cssnano for minification)
 
 ---
 
@@ -600,7 +608,7 @@ This project is a TypeScript fork of the excellent [iv-viewer](https://github.co
 **Improvements in this fork:**
 
 - ✅ Full TypeScript rewrite with strict types
-- ✅ Modern build system (Vite + Rollup)
+- ✅ Modern build system (Vite)
 - ✅ ESM + CommonJS + UMD support
 - ✅ Improved event system with error handling
 - ✅ Better documentation and examples
