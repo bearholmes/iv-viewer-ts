@@ -27,6 +27,7 @@ import type { ViewerElements, EventRemover } from './types';
 export class ImageLoader {
   private loadCounter: number = 0;
   private activeLoads: Map<string, EventRemover> = new Map();
+  private static readonly ALLOWED_PROTOCOLS = ['http:', 'https:', 'blob:'];
 
   constructor(
     private elements: Partial<ViewerElements>,
@@ -68,12 +69,10 @@ export class ImageLoader {
     remove(container.querySelectorAll('.iv-snap-image, .iv-image'));
 
     // Validate image URL
-    if (!isValidImageUrl(imageSrc)) {
-      throw new Error(`Invalid or unsafe image URL: ${imageSrc}`);
-    }
+    const safeImageSrc = this.sanitizeImageSrc(imageSrc);
 
     // Create image elements
-    const { snapImage, image } = this._createImageElements(imageSrc);
+    const { snapImage, image } = this._createImageElements(safeImageSrc);
 
     // Store image references
     this.elements.image = image;
@@ -123,6 +122,7 @@ export class ImageLoader {
     if (!imageWrap) {
       throw new Error('Image wrap element not found');
     }
+    const safeHiResSrc = this.sanitizeImageSrc(hiResImageSrc);
 
     const lowResImg = this.elements.image;
     if (!lowResImg) {
@@ -133,7 +133,7 @@ export class ImageLoader {
     const hiResImage = createElement({
       tagName: 'img',
       className: 'iv-image iv-large-image',
-      src: hiResImageSrc,
+      src: safeHiResSrc,
       parent: imageWrap,
     });
 
@@ -185,9 +185,7 @@ export class ImageLoader {
     image: HTMLImageElement;
   } {
     // Defense in depth: validate again before assigning src to DOM elements
-    if (!isValidImageUrl(imageSrc)) {
-      throw new Error(`Invalid or unsafe image URL: ${imageSrc}`);
-    }
+    const safeSrc = this.sanitizeImageSrc(imageSrc);
 
     const { snapImageWrap, imageWrap } = this.elements;
     if (!snapImageWrap || !imageWrap) {
@@ -202,7 +200,7 @@ export class ImageLoader {
       ...(firstChild ? { insertBefore: firstChild } : {}),
       parent: snapImageWrap,
     });
-    (snapImage as HTMLImageElement).src = imageSrc;
+    (snapImage as HTMLImageElement).setAttribute('src', safeSrc);
 
     // Create main image
     const image = createElement({
@@ -210,9 +208,24 @@ export class ImageLoader {
       className: 'iv-image iv-small-image',
       parent: imageWrap,
     });
-    (image as HTMLImageElement).src = imageSrc;
+    (image as HTMLImageElement).setAttribute('src', safeSrc);
 
     return { snapImage, image: image as HTMLImageElement };
+  }
+
+  /**
+   * Validates and normalizes image URLs to allowed protocols.
+   * Throws if the URL is unsafe.
+   */
+  private sanitizeImageSrc(src: string): string {
+    if (!isValidImageUrl(src)) {
+      throw new Error(`Invalid or unsafe image URL: ${src}`);
+    }
+    const parsed = new URL(src, window.location.href);
+    if (!ImageLoader.ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
+      throw new Error(`Invalid or unsafe image URL protocol: ${src}`);
+    }
+    return parsed.href;
   }
 
   /**

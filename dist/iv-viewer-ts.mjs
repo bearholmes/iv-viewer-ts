@@ -502,7 +502,7 @@ class ViewerHTMLTemplates {
 `;
   }
 }
-class ImageLoader {
+const _ImageLoader = class _ImageLoader {
   constructor(elements, onLoadSuccess, onLoadError) {
     __publicField(this, "loadCounter", 0);
     __publicField(this, "activeLoads", /* @__PURE__ */ new Map());
@@ -535,10 +535,8 @@ class ImageLoader {
       throw new Error("Loader element not found");
     }
     remove(container.querySelectorAll(".iv-snap-image, .iv-image"));
-    if (!isValidImageUrl(imageSrc)) {
-      throw new Error(`Invalid or unsafe image URL: ${imageSrc}`);
-    }
-    const { snapImage, image } = this._createImageElements(imageSrc);
+    const safeImageSrc = this.sanitizeImageSrc(imageSrc);
+    const { snapImage, image } = this._createImageElements(safeImageSrc);
     this.elements.image = image;
     this.elements.snapImage = snapImage;
     setStyle(ivLoader, { display: "block" });
@@ -575,6 +573,7 @@ class ImageLoader {
     if (!imageWrap) {
       throw new Error("Image wrap element not found");
     }
+    const safeHiResSrc = this.sanitizeImageSrc(hiResImageSrc);
     const lowResImg = this.elements.image;
     if (!lowResImg) {
       throw new Error("Low-res image not found");
@@ -582,7 +581,7 @@ class ImageLoader {
     const hiResImage = createElement({
       tagName: "img",
       className: "iv-image iv-large-image",
-      src: hiResImageSrc,
+      src: safeHiResSrc,
       parent: imageWrap
     });
     const lowResStyles = window.getComputedStyle(lowResImg);
@@ -623,9 +622,7 @@ class ImageLoader {
    * @private
    */
   _createImageElements(imageSrc) {
-    if (!isValidImageUrl(imageSrc)) {
-      throw new Error(`Invalid or unsafe image URL: ${imageSrc}`);
-    }
+    const safeSrc = this.sanitizeImageSrc(imageSrc);
     const { snapImageWrap, imageWrap } = this.elements;
     if (!snapImageWrap || !imageWrap) {
       throw new Error("Image wrap elements not found");
@@ -637,14 +634,28 @@ class ImageLoader {
     }, firstChild ? { insertBefore: firstChild } : {}), {
       parent: snapImageWrap
     }));
-    snapImage.src = imageSrc;
+    snapImage.setAttribute("src", safeSrc);
     const image = createElement({
       tagName: "img",
       className: "iv-image iv-small-image",
       parent: imageWrap
     });
-    image.src = imageSrc;
+    image.setAttribute("src", safeSrc);
     return { snapImage, image };
+  }
+  /**
+   * Validates and normalizes image URLs to allowed protocols.
+   * Throws if the URL is unsafe.
+   */
+  sanitizeImageSrc(src) {
+    if (!isValidImageUrl(src)) {
+      throw new Error(`Invalid or unsafe image URL: ${src}`);
+    }
+    const parsed = new URL(src, window.location.href);
+    if (!_ImageLoader.ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
+      throw new Error(`Invalid or unsafe image URL protocol: ${src}`);
+    }
+    return parsed.href;
   }
   /**
    * Handles successful image load
@@ -693,7 +704,9 @@ class ImageLoader {
     this.activeLoads.forEach((remover) => remover());
     this.activeLoads.clear();
   }
-}
+};
+__publicField(_ImageLoader, "ALLOWED_PROTOCOLS", ["http:", "https:", "blob:"]);
+let ImageLoader = _ImageLoader;
 class EventManager {
   constructor() {
     __publicField(this, "listeners", /* @__PURE__ */ new Map());

@@ -28,6 +28,7 @@ export declare class ImageLoader {
     private onLoadError;
     private loadCounter;
     private activeLoads;
+    private static readonly ALLOWED_PROTOCOLS;
     constructor(elements: Partial<ViewerElements>, onLoadSuccess: (loadId: number) => void, onLoadError: (loadId: number, error: Event | ErrorEvent) => void);
     /**
      * Loads an image with optional high-resolution version
@@ -70,6 +71,11 @@ export declare class ImageLoader {
      * @private
      */
     private _createImageElements;
+    /**
+     * Validates and normalizes image URLs to allowed protocols.
+     * Throws if the URL is unsafe.
+     */
+    private sanitizeImageSrc;
     /**
      * Handles successful image load
      * @private
