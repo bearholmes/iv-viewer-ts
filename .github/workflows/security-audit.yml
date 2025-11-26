@@ -74,9 +74,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: javascript
-          # Skip generated bundles to avoid duplicate findings from dist/**
-          paths-ignore: |
-            dist/**
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

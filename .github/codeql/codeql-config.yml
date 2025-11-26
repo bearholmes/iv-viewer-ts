@@ -1,0 +1,4 @@
+# Exclude generated bundles from CodeQL analysis to avoid false positives
+paths-ignore:
+  - dist/**
+  - "**/dist/**"
