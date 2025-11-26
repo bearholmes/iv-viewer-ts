@@ -71,7 +71,7 @@ class FullScreenViewer extends ImageViewer {
    * viewer.show('image.jpg', 'image-hd.jpg');
    * ```
    */
-  show(imageSrc: string, hiResImageSrc: string) {
+  show(imageSrc: string, hiResImageSrc?: string) {
     // show the element (use accessor method - Issue E2.1, use setStyle - Issue A1.10)
     const fullScreen = this._getElement('fullScreen');
     if (fullScreen) {

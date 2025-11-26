@@ -22,7 +22,7 @@ declare class FullScreenViewer extends ImageViewer {
      * viewer.show('image.jpg', 'image-hd.jpg');
      * ```
      */
-    show(imageSrc: string, hiResImageSrc: string): void;
+    show(imageSrc: string, hiResImageSrc?: string): void;
     /**
      * Hides the fullscreen viewer
      * Re-enables page scrolling and removes window resize handler
