@@ -1,0 +1,20 @@
+# Browsers that we support
+
+# Modern browsers (last 2 versions)
+last 2 Chrome versions
+last 2 Firefox versions
+last 2 Safari versions
+last 2 Edge versions
+
+# Market share > 0.5%
+> 0.5%
+
+# Not dead browsers
+not dead
+
+# Exclude IE11 (ES6+ features required)
+not IE 11
+
+# Mobile browsers
+last 2 iOS versions
+last 2 Android versions

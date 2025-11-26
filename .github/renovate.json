@@ -1,0 +1,87 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "description": "Renovate configuration with dependency cooldown strategy",
+  "timezone": "Asia/Seoul",
+  "schedule": ["every weekend"],
+  "prConcurrentLimit": 5,
+  "prCreation": "not-pending",
+  "stabilityDays": 7,
+  "packageRules": [
+    {
+      "description": "Major version updates - 14 days cooldown",
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["major"],
+      "stabilityDays": 14,
+      "minimumReleaseAge": "14 days",
+      "labels": ["dependencies", "major-update"]
+    },
+    {
+      "description": "Minor version updates - 7 days cooldown",
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["minor"],
+      "stabilityDays": 7,
+      "minimumReleaseAge": "7 days",
+      "labels": ["dependencies", "minor-update"]
+    },
+    {
+      "description": "Patch version updates - 3 days cooldown",
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["patch"],
+      "stabilityDays": 3,
+      "minimumReleaseAge": "3 days",
+      "labels": ["dependencies", "patch-update"],
+      "automerge": false
+    },
+    {
+      "description": "DevDependencies",
+      "matchDepTypes": ["devDependencies"],
+      "automerge": false,
+      "stabilityDays": 3,
+      "labels": ["dependencies", "devDependencies"]
+    },
+    {
+      "description": "Linting and formatting tools",
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["@typescript-eslint/**", "eslint", "prettier", "typescript"],
+      "groupName": "linting and formatting",
+      "stabilityDays": 7,
+      "labels": ["dependencies", "linting"]
+    },
+    {
+      "description": "Build tools",
+      "matchPackageNames": ["vite", "rollup", "vitest", "@vitest/**"],
+      "groupName": "build tools",
+      "stabilityDays": 7,
+      "labels": ["dependencies", "build-tools"]
+    },
+    {
+      "description": "Testing tools",
+      "matchPackagePatterns": ["^@testing-library", "vitest", "happy-dom", "jsdom"],
+      "groupName": "testing tools",
+      "stabilityDays": 5,
+      "labels": ["dependencies", "testing"]
+    },
+    {
+      "description": "TypeScript and related",
+      "matchPackageNames": ["typescript", "@types/**"],
+      "groupName": "TypeScript",
+      "stabilityDays": 7,
+      "labels": ["dependencies", "typescript"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "vulnerability"],
+    "stabilityDays": 0,
+    "minimumReleaseAge": null,
+    "description": "Security patches bypass cooldown"
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"]
+  },
+  "rangeStrategy": "pin",
+  "separateMajorMinor": true,
+  "separateMinorPatch": true
+}

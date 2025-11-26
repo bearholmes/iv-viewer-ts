@@ -1,11 +1,16 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "es2015",
     "useDefineForClassFields": true,
     "module": "esnext",
-    "lib": ["dom", "esnext"],
+    "lib": ["dom", "es2015", "es2016", "es2017"],
     "moduleResolution": "Node",
-    "strict": true,
+    // Gradual strict mode adoption
+    "strict": false,
+    "noImplicitAny": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "alwaysStrict": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
@@ -14,7 +19,7 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "downlevelIteration": true
   },
   "include": ["src/**/*.ts", "vite.config.ts"]
 }

@@ -12,18 +12,26 @@ export default defineConfig({
     extensions: ['.ts'],
   },
   build: {
-    target: 'esnext',
+    target: 'es2015', // ES2015 (ES6) for better compatibility
     lib: {
-      entry: 'src/index.ts', // TypeScript 파일의 경로를 지정해주어야 합니다.
-      name: 'iv-viewer',
+      entry: 'src/index.ts',
+      name: 'ImageViewer',
+      fileName: (format) => {
+        if (format === 'es') return 'iv-viewer-ts.mjs';
+        if (format === 'umd') return 'iv-viewer-ts.umd.js';
+        return `iv-viewer-ts.${format}.js`;
+      },
+      formats: ['es', 'umd'],
     },
     rollupOptions: {
       output: {
         exports: 'named',
-        format: 'es',
-        sourcemap: true,
+        // Ensure globals are defined for UMD build
+        globals: {},
       },
     },
     outDir: 'dist',
+    minify: 'terser',
+    sourcemap: true,
   },
 });
