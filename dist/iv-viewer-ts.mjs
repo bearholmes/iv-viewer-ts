@@ -623,6 +623,9 @@ class ImageLoader {
    * @private
    */
   _createImageElements(imageSrc) {
+    if (!isValidImageUrl(imageSrc)) {
+      throw new Error(`Invalid or unsafe image URL: ${imageSrc}`);
+    }
     const { snapImageWrap, imageWrap } = this.elements;
     if (!snapImageWrap || !imageWrap) {
       throw new Error("Image wrap elements not found");
