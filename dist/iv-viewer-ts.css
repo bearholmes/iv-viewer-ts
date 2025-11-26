@@ -1,8 +1,3 @@
-.iv {
-  /***** snap view css *****/
-  /*** zoom actions ***/
-  /**** snap view css end *****/
-}
 .iv-container {
   overflow: hidden;
   position: relative;
@@ -54,6 +49,9 @@
   transform: rotate(90deg);
   transform-origin: 50% 50%;
 }
+.iv {
+  /***** snap view css *****/
+}
 .iv-snap-view {
   width: 150px;
   height: 150px;
@@ -92,6 +90,9 @@
 }
 .iv-snap-handle:active {
   cursor: grabbing;
+}
+.iv {
+  /*** zoom actions ***/
 }
 .iv-zoom-actions {
   width: 100%;
@@ -152,6 +153,9 @@
 }
 .iv-button-zoom--out {
   left: 0;
+}
+.iv {
+  /**** snap view css end *****/
 }
 .iv-image-mode {
   display: inline-block;

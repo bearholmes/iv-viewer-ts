@@ -1,161 +1,176 @@
-import {
-  createElement,
-  addClass,
-  removeClass,
-  css,
-  removeCss,
-  wrap,
-  unwrap,
-  remove,
-  easeOutQuart,
-  imageLoaded,
-  clamp,
-  assignEvent,
-  getTouchPointsDistance,
-  ZOOM_CONSTANT,
-  MOUSE_WHEEL_COUNT,
-} from './util';
+import { getStyle, setStyle, parseStyleFloat, isValidImageUrl, clamp } from './util';
 
+import { ZoomAnimation, type ZoomBounds } from './ZoomAnimation';
+import { DimensionCalculator } from './DimensionCalculator';
+import { MomentumCalculator } from './MomentumCalculator';
+import { SliderCoordinator } from './SliderCoordinator';
+import { ViewerHTMLTemplates } from './ViewerHTMLTemplates';
+import { ImageLoader } from './ImageLoader';
+import { EventManager } from './EventManager';
+import { ImageViewerDOM } from './ImageViewerDOM';
+import { InteractionManager } from './InteractionManager';
+
+import type {
+  ImageViewerOptions,
+  ViewerElements,
+  ViewerState,
+  ImageViewerListeners,
+  AnimationFrames,
+  Dimensions,
+} from './types';
 
 import Slider from './Slider';
-import FullScreenViewer from "./FullScreen";
+import FullScreenViewer from './FullScreen';
 
+// Extend HTMLElement interface to include custom _imageViewer property
+export interface HTMLElementWithViewer extends HTMLElement {
+  _imageViewer?: ImageViewer | null;
+}
 
 class ImageViewer {
-  static defaults: any;
+  static defaults: ImageViewerOptions;
   static FullScreenViewer: typeof FullScreenViewer;
-  _ev: any;
-  protected _elements: any;
-  protected _events: {
-    pinchStart?: () => void;
-    zoomOutClick?: () => void;
-    zoomInClick?: () => void;
-    mouseLeaveSnapView?: () => void;
-    mouseEnterSnapView?: () => void;
-    imageLoad?: () => void;
-    imageError?: () => void;
-    hiResImageLoad?: () => void;
-    snapViewOnMouseMove?: () => void;
-    onWindowResize?: () => void;
-    onCloseBtnClick?: () => void;
-    pinchMove?: () => void;
-    pinchEnd?: () => void;
-  };
-  private _options: {
-    zoomStep?: number;
-    zoomOnMouseWheel?: boolean;
-    refreshOnResize?: any;
-    snapView: boolean;
-    zoomValue: any;
-    maxZoom: number;
-    hasZoomButtons: any;
-    listeners: any;
-  };
-  private _listeners: any;
-  private _state: {
-    zoomSliderLength?: number;
-    snapHandleDim?: { w: number; h: number };
-    zooming?: boolean;
-    snapViewVisible?: boolean;
-    zoomValue?: any
-    loaded?: any
-    imageDim?: any
-    containerDim?: any
-    snapImageDim?: any
-  };
+
+  // REFACTOR: Extract magic constants for better maintainability
+  private static readonly MOMENTUM_SAMPLE_INTERVAL_MS = 50;
+  private static readonly MOMENTUM_ANIMATION_FRAMES = 60;
+  private static readonly MOMENTUM_THRESHOLD_PX = 30;
+  private static readonly MOMENTUM_VELOCITY_FACTOR = 1 / 3;
+  private static readonly ZOOM_ANIMATION_FRAMES = 16;
+  private static readonly SNAP_VIEW_TIMEOUT_MS = 1500;
+
+  private _elements: ViewerElements; // REFACTOR: Changed from protected to private (Issue E2.1)
+  private _options: Required<ImageViewerOptions>;
+  private _listeners: ImageViewerListeners;
+  private _state: ViewerState;
   private _sliders: {
-    snapSlider?: any; imageSlider?: any; zoomSlider?: any;
+    snapSlider?: Slider;
+    imageSlider?: Slider;
+    zoomSlider?: Slider;
   };
-  private _frames: {
-    slideMomentumCheck?: NodeJS.Timeout;
-    zoomFrame?: number;
-    snapViewTimeout?: NodeJS.Timeout;
-    sliderMomentumFrame?: number;
-  };
-  private _images: { hiResImageSrc: any; imageSrc: any };
+  private _frames: Partial<AnimationFrames>;
+  private _images: { hiResImageSrc?: string; imageSrc?: string };
+  private imageLoader: ImageLoader; // REFACTOR: Extract image loading logic (Issue C3.1)
+  protected eventManager: EventManager; // REFACTOR: Centralized event management (Issue A1.5, Phase 6.1)
+  private dom: ImageViewerDOM; // REFACTOR: Extract DOM management logic (Issue C3.1, Phase 8)
+  private interactionManager: InteractionManager; // REFACTOR: Extract interaction logic (Phase 7)
 
-  constructor(element: any, options = {}) {
-    const {container, domElement, imageSrc, hiResImageSrc} = this._findContainerAndImageSrc(element);
+  /**
+   * Creates a new ImageViewer instance
+   * @param element - DOM element, CSS selector, or IMG element to initialize the viewer on
+   * @param options - Configuration options (zoomValue, maxZoom, snapView, etc.)
+   * @example
+   * ```typescript
+   * // Initialize on an image element
+   * const viewer = new ImageViewer('#myImage', { maxZoom: 800 });
+   *
+   * // Initialize on a container with data attributes
+   * const viewer = new ImageViewer(document.querySelector('.container'), {
+   *   snapView: true,
+   *   zoomOnMouseWheel: true
+   * });
+   * ```
+   */
+  constructor(element: string | HTMLElement, options = {}) {
+    this._options = { ...ImageViewer.defaults, ...options } as Required<ImageViewerOptions>;
 
+    // REFACTOR: Use ImageViewerDOM for DOM initialization (Phase 8)
+    this.dom = new ImageViewerDOM();
+    const { domElement, imageSrc, hiResImageSrc, elements } = this.dom.initialize(
+      element,
+      ViewerHTMLTemplates.createViewerHTML(this._options.hasZoomButtons),
+      (url, context) => this._validateImageUrl(url, context as 'main' | 'hiRes'),
+    );
 
-    // containers for elements
-    this._elements = {
-      container, domElement,
-    };
+    // Store element references
+    this._elements = elements as ViewerElements;
 
-
-    this._options = {...ImageViewer.defaults, ...options};
-
-
-    // container for all events
-    this._events = {};
-
-
-    this._listeners = this._options.listeners || {};
-
+    // P3-5 FIX: Explicit null checking pattern for optional properties
+    this._listeners =
+      this._options.listeners !== undefined && this._options.listeners !== null
+        ? this._options.listeners
+        : {};
 
     // container for all timeout and frames
     this._frames = {};
 
-
     // container for all sliders
     this._sliders = {};
-
 
     // maintain current state
     this._state = {
       zoomValue: this._options.zoomValue,
+      loaded: false,
+      imageDim: { w: 0, h: 0 },
+      containerDim: { w: 0, h: 0 },
+      snapImageDim: { w: 0, h: 0 },
+      zooming: false,
+      snapViewVisible: false,
+      zoomSliderLength: 0,
+      snapHandleDim: { w: 0, h: 0 },
     };
-
 
     this._images = {
-      imageSrc, hiResImageSrc,
+      imageSrc,
+      hiResImageSrc,
     };
 
+    // REFACTOR: Initialize ImageLoader for handling image loading operations (Issue C3.1)
+    this.imageLoader = new ImageLoader(
+      this._elements,
+      (loadId) => this._handleImageLoadSuccess(loadId),
+      (loadId, error) => this._handleImageLoadError(loadId, error),
+    );
+
+    // REFACTOR: Initialize EventManager for centralized event management (Issue A1.5)
+    this.eventManager = new EventManager();
+
+    // REFACTOR: Initialize InteractionManager for gesture handling (Phase 7)
+    this.interactionManager = new InteractionManager(
+      {
+        imageWrap: this._elements.imageWrap!,
+        container: this._elements.container!,
+      },
+      this.eventManager,
+      {
+        zoomOnMouseWheel: this._options.zoomOnMouseWheel,
+        zoomValue: this._options.zoomValue,
+        maxZoom: this._options.maxZoom,
+      },
+      {
+        getState: () => ({
+          loaded: this._state.loaded ?? false,
+          zoomValue: this._state.zoomValue ?? 100,
+          zooming: this._state.zooming ?? false,
+        }),
+        setZooming: (zooming) => this._setZooming(zooming),
+        clearFrames: () => this._clearFrames(),
+        zoom: (value, point) => this.zoom(value, point),
+        resetZoom: () => this.resetZoom(),
+        showSnapView: () => this.showSnapView(),
+        getSlider: (key) => this._getSlider(key as 'imageSlider' | 'snapSlider' | 'zoomSlider'),
+        getScrollPosition: () => this._getScrollPosition(),
+      },
+    );
 
     this._init();
-
 
     if (imageSrc) {
       this._loadImages();
     }
 
-
     // store reference of imageViewer in domElement
-    domElement._imageViewer = this;
+    (domElement as HTMLElementWithViewer)._imageViewer = this;
   }
 
-  get zoomInButton() {
-    return this._options.hasZoomButtons ? `<div class="iv-button-zoom--in" role="button"></div>` : '';
-  }
-
-  get zoomOutButton() {
-    return this._options.hasZoomButtons ? `<div class="iv-button-zoom--out" role="button"></div>` : '';
-  }
-
+  // REFACTOR: HTML generation moved to ViewerHTMLTemplates (Issue C3.1)
   get imageViewHtml() {
-    return `
-  <div class="iv-loader"></div>
-  <div class="iv-snap-view">
-    <div class="iv-snap-image-wrap">
-      <div class="iv-snap-handle"></div>
-    </div>
-    <div class="iv-zoom-actions ${this._options.hasZoomButtons ? 'iv-zoom-actions--has-buttons' : ''}">
-      ${this.zoomInButton}
-      <div class="iv-zoom-slider">
-        <div class="iv-zoom-handle"></div>
-      </div>
-      ${this.zoomOutButton}
-    </div>
-  </div>
-  <div class="iv-image-view" >
-    <div class="iv-image-wrap" ></div>
-  </div>
-`;
+    return ViewerHTMLTemplates.createViewerHTML(this._options.hasZoomButtons);
   }
 
   /**
-   * Data will be passed to the callback registered with each new instance
+   * Returns callback data object passed to event listeners
+   * Includes container, snapView, zoom values, and instance reference
    */
   get _callbackData(): {
     container: HTMLElement;
@@ -165,6 +180,11 @@ class ImageViewer {
     reachedMax: boolean;
     instance: ImageViewer;
   } {
+    // P3-1 FIX: Add null checking for elements that might not be initialized
+    if (!this._elements.container || !this._elements.snapView) {
+      throw new Error('ImageViewer elements not initialized. Cannot get callback data.');
+    }
+
     return {
       container: this._elements.container,
       snapView: this._elements.snapView,
@@ -175,1008 +195,1000 @@ class ImageViewer {
     };
   }
 
-  _findContainerAndImageSrc(element: any) {
-    let domElement = element;
-    let imageSrc, hiResImageSrc;
+  // REFACTOR: State setter methods for better encapsulation (Issue E2.4)
+  // These methods centralize state modifications for easier tracking and validation
 
+  protected _setZoomValue(value: number): void {
+    this._state.zoomValue = value;
+  }
 
-    if (typeof element === 'string') {
-      domElement = document.querySelector(element) as HTMLElement;
+  protected _setLoaded(loaded: boolean): void {
+    this._state.loaded = loaded;
+  }
+
+  protected _setZooming(zooming: boolean): void {
+    this._state.zooming = zooming;
+  }
+
+  protected _setSnapViewVisible(visible: boolean): void {
+    this._state.snapViewVisible = visible;
+  }
+
+  protected _setContainerDim(dim: Dimensions): void {
+    this._state.containerDim = dim;
+  }
+
+  protected _setImageDim(dim: Dimensions): void {
+    this._state.imageDim = dim;
+  }
+
+  protected _setSnapImageDim(dim: Dimensions): void {
+    this._state.snapImageDim = dim;
+  }
+
+  protected _setSnapHandleDim(dim: Dimensions): void {
+    this._state.snapHandleDim = dim;
+  }
+
+  protected _setZoomSliderLength(length: number): void {
+    this._state.zoomSliderLength = length;
+  }
+
+  // REFACTOR: Element and event accessor methods for better encapsulation (Issues E2.1, E2.2)
+  // These methods provide controlled access to internal elements and events for subclasses
+
+  protected _getElement<K extends keyof ViewerElements>(key: K): ViewerElements[K] | undefined {
+    return this._elements[key] as ViewerElements[K] | undefined;
+  }
+
+  protected _setElement<K extends keyof ViewerElements>(
+    key: K,
+    element: ViewerElements[K] | undefined,
+  ): void {
+    this._elements[key] = element;
+  }
+
+  // REFACTOR: Slider accessor methods for better encapsulation (Issue E2.5)
+  // These methods provide controlled access to slider instances
+
+  private _getSlider<K extends keyof typeof this._sliders>(key: K): (typeof this._sliders)[K] {
+    return this._sliders[key];
+  }
+
+  private _setSlider<K extends keyof typeof this._sliders>(
+    key: K,
+    slider: (typeof this._sliders)[K],
+  ): void {
+    this._sliders[key] = slider;
+  }
+
+  private _destroySlider(key: 'imageSlider' | 'snapSlider' | 'zoomSlider'): void {
+    const slider = this._sliders[key];
+    if (slider) {
+      slider.destroy();
+      this._sliders[key] = undefined;
+    }
+  }
+
+  // REFACTOR: Extract duplicated URL validation logic (Issue A1.4)
+  private _validateImageUrl(
+    url: string | null | undefined,
+    urlType: 'main' | 'hiRes' = 'main',
+  ): string | null {
+    if (!url) return null;
+
+    if (!isValidImageUrl(url)) {
+      const typeLabel = urlType === 'hiRes' ? 'high-res ' : '';
+      throw new Error(`Invalid or unsafe ${typeLabel}image URL: ${url}`);
     }
 
+    return url;
+  }
 
-    // throw error if imageViewer is already assigned
-    if (domElement._imageViewer) {
-      throw new Error('An image viewer is already being initiated on the element.');
-    }
+  // REFACTOR: Images object structure validation (Issue E2.10)
+  private _setImageSources(sources: {
+    imageSrc?: string | null;
+    hiResImageSrc?: string | null;
+  }): void {
+    // Validate image sources before setting
+    const validatedImageSrc = this._validateImageUrl(sources.imageSrc ?? null, 'main');
+    const validatedHiResImageSrc = this._validateImageUrl(sources.hiResImageSrc ?? null, 'hiRes');
 
-
-    let container = element;
-
-
-    if (domElement.tagName === 'IMG') {
-      imageSrc = domElement.src;
-      hiResImageSrc = domElement.getAttribute('high-res-src') || domElement.getAttribute('data-high-res-src');
-
-
-      // wrap the image with iv-container div
-      container = wrap(domElement, {
-        className: 'iv-container iv-image-mode', style: {display: 'inline-block', overflow: 'hidden'}
-      });
-
-
-      // hide the image and add iv-original-img class
-      css(domElement, {
-        opacity: 0, position: 'relative', zIndex: -1,
-      });
-    } else {
-      imageSrc = domElement.getAttribute('src') || domElement.getAttribute('data-src');
-      hiResImageSrc = domElement.getAttribute('high-res-src') || domElement.getAttribute('data-high-res-src');
-    }
-
-
-    return {
-      container, domElement, imageSrc, hiResImageSrc,
+    this._images = {
+      imageSrc: validatedImageSrc ?? undefined,
+      hiResImageSrc: validatedHiResImageSrc ?? undefined,
     };
   }
 
-  _init() {
-    // initialize the dom elements
-    this._initDom();
+  // REFACTOR: Extract duplicated scroll position logic (Issue A1.6)
+  private _getScrollPosition(): { x: number; y: number } {
+    return {
+      x: window.pageXOffset || window.scrollX || 0,
+      y: window.pageYOffset || window.scrollY || 0,
+    };
+  }
 
+  // REFACTOR: Extract duplicated zoom step retrieval (Issue A1.7)
+  private _getZoomStep(): number {
+    return this._options.zoomStep !== undefined && this._options.zoomStep !== null
+      ? this._options.zoomStep
+      : 50;
+  }
+
+  // REFACTOR: Extract momentum calculation logic (Issue A1.3)
+  // These methods centralize momentum tracking and animation for better testability
+
+  // REFACTOR: Momentum calculation methods moved to MomentumCalculator (Issue C3.1/A1.3)
+  private _calculateMomentumDelta(positions: Array<{ x: number; y: number }>): {
+    xDiff: number;
+    yDiff: number;
+  } {
+    return MomentumCalculator.calculateDelta(positions);
+  }
+
+  private _shouldApplyMomentum(xDiff: number, yDiff: number): boolean {
+    return MomentumCalculator.shouldApplyMomentum(xDiff, yDiff, ImageViewer.MOMENTUM_THRESHOLD_PX);
+  }
+
+  // REFACTOR: Momentum animation using MomentumCalculator (Issue C3.1/A1.3)
+  private _applyMomentumAnimation(
+    xDiff: number,
+    yDiff: number,
+    currentPos: { dx: number; dy: number },
+    imageCurrentDim: { w: number; h: number },
+    snapImageDim: { w: number; h: number },
+    snapSlider: Slider,
+  ): void {
+    let step = 1;
+    let cumulativeX = 0;
+    let cumulativeY = 0;
+
+    const config = {
+      thresholdPx: ImageViewer.MOMENTUM_THRESHOLD_PX,
+      velocityFactor: ImageViewer.MOMENTUM_VELOCITY_FACTOR,
+      animationFrames: ImageViewer.MOMENTUM_ANIMATION_FRAMES,
+    };
+
+    const momentum = () => {
+      // Calculate frame position using MomentumCalculator
+      const frame = MomentumCalculator.calculateMomentumFrame(
+        step,
+        { dx: cumulativeX, dy: cumulativeY },
+        { xDiff, yDiff },
+        config,
+      );
+
+      if (frame.shouldContinue) {
+        this._frames.sliderMomentumFrame = requestAnimationFrame(momentum);
+      }
+
+      // Update cumulative positions
+      cumulativeX = frame.positionX;
+      cumulativeY = frame.positionY;
+
+      const finalPosX = currentPos.dx + cumulativeX;
+      const finalPosY = currentPos.dy + cumulativeY;
+
+      // Convert to snap coordinates using MomentumCalculator
+      const snapCoords = MomentumCalculator.convertToSnapCoordinates(
+        { x: finalPosX, y: finalPosY },
+        imageCurrentDim,
+        snapImageDim,
+      );
+
+      // REFACTOR: Use updatePosition instead of dummy event (Issue A1.12)
+      snapSlider.updatePosition({
+        dx: snapCoords.dx,
+        dy: snapCoords.dy,
+        mx: 0,
+        my: 0,
+      });
+
+      step++;
+    };
+
+    momentum();
+  }
+
+  _init() {
+    // REFACTOR: DOM initialization now handled by ImageViewerDOM (Phase 8)
 
     // initialize slider
     this._initImageSlider();
     this._initSnapSlider();
     this._initZoomSlider();
 
-
-    // enable pinch and zoom feature for touch screens
-    this._pinchAndZoom();
-
-
-    // enable scroll zoom interaction
-    this._scrollZoom();
-
-
-    // enable double tap to zoom interaction
-    this._doubleTapToZoom();
-
+    // REFACTOR: Setup interactions using InteractionManager (Phase 7)
+    this.interactionManager.setupInteractions();
 
     // initialize events
     this._initEvents();
-  }
 
-  _initDom() {
-    const {container} = this._elements;
-
-
-    // add image-viewer layout elements
-    createElement({
-      tagName: 'div', className: 'iv-wrap', html: this.imageViewHtml, parent: container,
-    });
-
-
-    // add container class on the container
-    addClass(container, 'iv-container');
-
-
-    // if the element is static position, position it relatively
-    if (css(container, 'position') === 'static') {
-      css(container, {position: 'relative'});
-    }
-
-
-    // save references for later use
-    this._elements = {
-      ...this._elements,
-      snapView: container.querySelector('.iv-snap-view'),
-      snapImageWrap: container.querySelector('.iv-snap-image-wrap'),
-      imageWrap: container.querySelector('.iv-image-wrap'),
-      snapHandle: container.querySelector('.iv-snap-handle'),
-      zoomHandle: container.querySelector('.iv-zoom-handle'),
-      zoomIn: container.querySelector('.iv-button-zoom--in'),
-      zoomOut: container.querySelector('.iv-button-zoom--out'),
-    };
-
-
+    // Trigger onInit callback
     if (this._listeners.onInit) {
       this._listeners.onInit(this._callbackData);
     }
   }
 
+  /**
+   * Initializes the main image slider with pan and momentum scrolling
+   * REFACTOR: Uses SliderCoordinator to decouple sliders (Issue C3.5)
+   * Tracks position history for momentum calculation and syncs with snap view
+   */
   _initImageSlider() {
-    const {
-      _elements,
-    } = this;
+    const { _elements } = this;
 
+    const { imageWrap } = _elements;
 
-    const {imageWrap} = _elements;
+    let positions: { x: number; y: number }[];
+    let currentPos: { dx: number; dy: number; mx: number; my: number } | undefined;
 
-
-    let positions: any, currentPos: any;
-
+    // REFACTOR: Create coordinator to handle image/snap slider synchronization (Issue C3.5)
+    const sliderCoordinator = new SliderCoordinator(this._getSlider('snapSlider'), {
+      getImageDim: () => this._getImageCurrentDim(),
+      getSnapImageDim: () => this._state.snapImageDim,
+    });
 
     /* Add slide interaction to image */
     const imageSlider = new Slider(imageWrap, {
       isSliderEnabled: () => {
-        const {loaded, zooming, zoomValue} = this._state;
+        const { loaded, zooming, zoomValue } = this._state;
         return loaded && !zooming && zoomValue > 100;
-      }, onStart: (_, position) => {
-        const {snapSlider} = this._sliders;
-
-
+      },
+      onStart: (event, position) => {
         // clear all animation frame and interval
         this._clearFrames();
 
-
-        snapSlider.onStart();
-
+        // REFACTOR: Use coordinator instead of direct snap slider access (Issue C3.5)
+        sliderCoordinator.notifyPanStart(event);
 
         // reset positions
         positions = [position, position];
         currentPos = undefined;
 
+        // P2-4 FIX: Use requestAnimationFrame instead of setInterval for better performance
+        // Track position for momentum calculation
+        let lastSampleTime = performance.now();
+        const sampleInterval = ImageViewer.MOMENTUM_SAMPLE_INTERVAL_MS;
 
-        this._frames.slideMomentumCheck = setInterval(() => {
-          if (!currentPos) return;
+        const trackPosition = (currentTime: number) => {
+          if (currentTime - lastSampleTime >= sampleInterval) {
+            if (currentPos) {
+              positions.shift();
+              positions.push({
+                x: currentPos.mx,
+                y: currentPos.my,
+              });
+            }
+            lastSampleTime = currentTime;
+          }
+          this._frames.slideMomentumCheck = requestAnimationFrame(trackPosition);
+        };
 
-
-          positions.shift();
-          positions.push({
-            x: currentPos.mx, y: currentPos.my,
-          });
-        }, 50);
-      }, onMove: (e, position) => {
-        const {snapImageDim} = this._state;
-        const {snapSlider} = this._sliders;
-        const imageCurrentDim = this._getImageCurrentDim();
+        this._frames.slideMomentumCheck = requestAnimationFrame(trackPosition);
+      },
+      onMove: (_e, position) => {
         currentPos = position;
 
-
-        snapSlider.onMove(e, {
-          dx: -position.dx * snapImageDim.w / imageCurrentDim.w, dy: -position.dy * snapImageDim.h / imageCurrentDim.h,
-        });
-      }, onEnd: () => {
-        const {snapImageDim} = this._state;
-        const {snapSlider} = this._sliders;
+        // REFACTOR: Use coordinator to sync snap slider (Issue C3.5)
+        sliderCoordinator.syncSnapSliderPosition(position);
+      },
+      onEnd: () => {
+        const { snapImageDim } = this._state;
         const imageCurrentDim = this._getImageCurrentDim();
-
 
         // clear all animation frame and interval
         this._clearFrames();
 
+        // Calculate momentum delta (use helper - Issue A1.3)
+        const { xDiff, yDiff } = this._calculateMomentumDelta(positions);
 
-        let step: number, positionX: number, positionY: number;
-
-
-        const xDiff = positions[1].x - positions[0].x;
-        const yDiff = positions[1].y - positions[0].y;
-
-
-        const momentum = () => {
-          if (step <= 60) {
-            this._frames.sliderMomentumFrame = requestAnimationFrame(momentum);
-          }
-
-
-          positionX += easeOutQuart(step, xDiff / 3, -xDiff / 3, 60);
-          positionY += easeOutQuart(step, yDiff / 3, -yDiff / 3, 60);
-
-
-          snapSlider.onMove(null, {
-            dx: -(positionX * snapImageDim.w / imageCurrentDim.w),
-            dy: -(positionY * snapImageDim.h / imageCurrentDim.h),
-          });
-
-
-          step++;
-        };
-
-
-        if (Math.abs(xDiff) > 30 || Math.abs(yDiff) > 30) {
-          step = 1;
-          positionX = currentPos.dx;
-          positionY = currentPos.dy;
-
-
-          momentum();
+        // Apply momentum animation if threshold exceeded (use helper - Issue A1.3)
+        if (this._shouldApplyMomentum(xDiff, yDiff)) {
+          // REFACTOR: Get snap slider through coordinator (Issue C3.5)
+          const snapSlider = sliderCoordinator.getSnapSlider();
+          this._applyMomentumAnimation(
+            xDiff,
+            yDiff,
+            currentPos,
+            imageCurrentDim,
+            snapImageDim,
+            snapSlider,
+          );
         }
       },
     });
 
-
     imageSlider.init();
 
+    this._setSlider('imageSlider', imageSlider);
+  }
 
-    this._sliders.imageSlider = imageSlider;
+  /**
+   * Initializes the snap view slider for dragging the snap handle
+   * Handles boundary constraints and syncs with main image position
+   */
+  /**
+   * REFACTOR: Calculate snap handle position bounds
+   * @param startLeft - Starting left position
+   * @param startTop - Starting top position
+   * @param delta - Position delta from drag
+   * @param snapHandleDim - Snap handle dimensions
+   * @param snapImageDim - Snap image dimensions
+   * @returns Clamped handle position
+   */
+  private _calculateSnapHandlePosition(
+    startLeft: number,
+    startTop: number,
+    delta: { dx: number; dy: number },
+    snapHandleDim: { w: number; h: number },
+    snapImageDim: { w: number; h: number },
+  ): { left: number; top: number } {
+    // BUG-1 FIX: Correct boundary logic for snap handle positioning
+    // Handle can move within the snap image bounds
+    const maxLeft = snapImageDim.w - snapHandleDim.w;
+    const maxTop = snapImageDim.h - snapHandleDim.h;
+    const minLeft = 0;
+    const minTop = 0;
+
+    const left = clamp(startLeft + delta.dx, minLeft, maxLeft);
+    const top = clamp(startTop + delta.dy, minTop, maxTop);
+
+    return { left, top };
+  }
+
+  /**
+   * REFACTOR: Convert snap handle position to main image position
+   * @param snapPosition - Snap handle position
+   * @param imageCurrentDim - Current image dimensions
+   * @param snapImageDim - Snap image dimensions
+   * @returns Main image position
+   */
+  private _convertSnapToImagePosition(
+    snapPosition: { left: number; top: number },
+    imageCurrentDim: { w: number; h: number },
+    snapImageDim: { w: number; h: number },
+  ): { left: number; top: number } {
+    // P2-6 FIX: Prevent division by zero
+    const left =
+      snapImageDim.w !== 0 ? (-snapPosition.left * imageCurrentDim.w) / snapImageDim.w : 0;
+    const top = snapImageDim.h !== 0 ? (-snapPosition.top * imageCurrentDim.h) / snapImageDim.h : 0;
+
+    return { left, top };
   }
 
   _initSnapSlider() {
-    const {
-      snapHandle,
-    } = this._elements;
+    const { snapHandle } = this._elements;
 
-
-    let startHandleTop: any, startHandleLeft: any;
-
+    let startHandleTop: number;
+    let startHandleLeft: number;
 
     const snapSlider = new Slider(snapHandle, {
       isSliderEnabled: () => {
         return this._state.loaded;
-      }, onStart: () => {
-        const {slideMomentumCheck, sliderMomentumFrame} = this._frames;
+      },
+      onStart: () => {
+        const { slideMomentumCheck, sliderMomentumFrame } = this._frames;
 
-
-        startHandleTop = parseFloat(<string>css(snapHandle, 'top'));
-        startHandleLeft = parseFloat(<string>css(snapHandle, 'left'));
-
+        // P2-7 FIX: Add fallback for parseFloat to prevent NaN (use getStyle - Issue A1.10)
+        startHandleTop = parseStyleFloat(snapHandle, 'top');
+        startHandleLeft = parseStyleFloat(snapHandle, 'left');
 
         // stop momentum on image
-        if(slideMomentumCheck) clearInterval(slideMomentumCheck);
-        if (typeof sliderMomentumFrame === "number") {
+        if (slideMomentumCheck) clearInterval(slideMomentumCheck);
+        if (typeof sliderMomentumFrame === 'number') {
           cancelAnimationFrame(sliderMomentumFrame);
         }
-      }, onMove: (_, position) => {
-        const {snapHandleDim, snapImageDim} = this._state;
-        const {image} = this._elements;
-
+      },
+      onMove: (_, position) => {
+        const { snapHandleDim, snapImageDim } = this._state;
+        const { image } = this._elements;
 
         const imageCurrentDim = this._getImageCurrentDim();
 
-
         if (!snapHandleDim) return;
-        // find handle left and top and make sure they lay between the snap image
-        const maxLeft = Math.max(snapImageDim.w - snapHandleDim.w, startHandleLeft);
-        const maxTop = Math.max(snapImageDim.h - snapHandleDim.h, startHandleTop);
-        const minLeft = Math.min(0, startHandleLeft);
-        const minTop = Math.min(0, startHandleTop);
 
+        // Calculate snap handle position with boundary constraints (use helper)
+        const handlePos = this._calculateSnapHandlePosition(
+          startHandleLeft,
+          startHandleTop,
+          position,
+          snapHandleDim,
+          snapImageDim,
+        );
 
-        const left = clamp(startHandleLeft + position.dx, minLeft, maxLeft);
-        const top = clamp(startHandleTop + position.dy, minTop, maxTop);
+        // Convert snap position to main image position (use helper)
+        const imagePos = this._convertSnapToImagePosition(handlePos, imageCurrentDim, snapImageDim);
 
-
-        const imgLeft = -left * imageCurrentDim.w / snapImageDim.w;
-        const imgTop = -top * imageCurrentDim.h / snapImageDim.h;
-
-
-        css(snapHandle, {
-          left: `${left}px`, top: `${top}px`,
+        // Update snap handle position
+        setStyle(snapHandle, {
+          left: `${handlePos.left}px`,
+          top: `${handlePos.top}px`,
         });
 
-
-        css(image, {
-          left: `${imgLeft}px`, top: `${imgTop}px`,
+        // Update main image position
+        setStyle(image, {
+          left: `${imagePos.left}px`,
+          top: `${imagePos.top}px`,
         });
+      },
+      // REFACTOR: onEnd callback is now required (Issue E2.7)
+      onEnd: () => {
+        // No action needed on drag end for snap slider
       },
     });
 
-
     snapSlider.init();
 
-
-    this._sliders.snapSlider = snapSlider;
+    this._setSlider('snapSlider', snapSlider);
   }
 
+  /**
+   * Initializes the zoom slider control in the snap view
+   * Maps slider position to zoom level between 100% and maxZoom
+   */
   _initZoomSlider() {
-    const {snapView, zoomHandle} = this._elements;
-
+    const { snapView, zoomHandle } = this._elements;
 
     // zoom in zoom out using zoom handle
-    const sliderElm = snapView.querySelector('.iv-zoom-slider');
-
+    const sliderElm = snapView.querySelector('.iv-zoom-slider') as HTMLElement;
+    if (!sliderElm) {
+      throw new Error('Zoom slider element not found');
+    }
 
     let leftOffset: number, handleWidth: number;
-
 
     // on zoom slider we have to follow the mouse and set the handle to its position.
     const zoomSlider = new Slider(sliderElm, {
       isSliderEnabled: () => {
         return this._state.loaded;
-      }, onStart: (eStart) => {
-        const {zoomSlider: slider} = this._sliders;
+      },
+      onStart: (eStart, position) => {
+        const { zoomSlider: slider } = this._sliders;
 
+        // P2-1 FIX: Use modern scroll position API (use helper - Issue A1.6)
+        const scroll = this._getScrollPosition();
+        leftOffset = sliderElm.getBoundingClientRect().left + scroll.x;
+        handleWidth = parseInt(getStyle(zoomHandle, 'width'), 10);
 
-        leftOffset = sliderElm.getBoundingClientRect().left + document.body.scrollLeft;
-        handleWidth = parseInt(<string>css(zoomHandle, 'width'), 10);
+        // REFACTOR: Pass required position parameter to slider.onMove (Issue C3.7)
+        // Move handle to current mouse position with zero delta (just started)
+        slider.onMove(eStart, { dx: 0, dy: 0, mx: position.x, my: position.y });
+      },
+      onMove: (e) => {
+        const { maxZoom } = this._options;
+        const { zoomSliderLength } = this._state;
 
-
-        // move the handle to current mouse position
-        slider.onMove(eStart);
-      }, onMove: (e) => {
-        const {maxZoom} = this._options;
-        const {zoomSliderLength} = this._state;
-
-
-        const pageX = e.pageX !== undefined ? e.pageX : e.touches[0].pageX;
-
+        let pageX: number;
+        if (e instanceof MouseEvent) {
+          pageX = e.pageX;
+        } else if (e instanceof TouchEvent) {
+          pageX = e.touches[0].pageX;
+        } else {
+          return;
+        }
 
         if (!zoomSliderLength) return;
         const newLeft = clamp(pageX - leftOffset - handleWidth / 2, 0, zoomSliderLength);
-        const zoomValue = 100 + ((maxZoom - 100) * newLeft / zoomSliderLength);
-
+        const zoomValue = 100 + ((maxZoom - 100) * newLeft) / zoomSliderLength;
 
         this.zoom(zoomValue);
       },
+      // REFACTOR: onEnd callback is now required (Issue E2.7)
+      onEnd: () => {
+        // No action needed on drag end for zoom slider
+      },
     });
 
-
     zoomSlider.init();
-    this._sliders.zoomSlider = zoomSlider;
+    this._setSlider('zoomSlider', zoomSlider);
   }
 
   _initEvents() {
     this._snapViewEvents();
 
-
-    // handle window resize
+    // REFACTOR: Use EventManager for window resize event (Issue A1.5)
     if (this._options.refreshOnResize) {
-      this._events.onWindowResize = assignEvent(window as any as HTMLElement, 'resize', this.refresh);
+      this.eventManager.on('windowResize', window, 'resize', () => this.refresh());
     }
   }
 
   _snapViewEvents() {
-    const {imageWrap, snapView} = this._elements;
+    const { imageWrap, snapView } = this._elements;
 
-
-    // show snapView on mouse move
-    this._events.snapViewOnMouseMove = assignEvent(imageWrap, ['touchmove', 'mousemove'], () => {
+    // REFACTOR: Use EventManager for snap view mouse move event (Issue A1.5)
+    this.eventManager.on('snapViewOnMouseMove', imageWrap, ['touchmove', 'mousemove'], () => {
       this.showSnapView();
     });
 
-
-    // keep showing snapView if on hover over it without any timeout
-    this._events.mouseEnterSnapView = assignEvent(snapView, ['mouseenter', 'touchstart'], () => {
-      this._state.snapViewVisible = false;
+    // REFACTOR: Use EventManager for snap view mouse enter event (Issue A1.5)
+    this.eventManager.on('mouseEnterSnapView', snapView, ['mouseenter', 'touchstart'], () => {
+      this._setSnapViewVisible(false);
       this.showSnapView(true);
     });
 
-
-    // on mouse leave set timeout to hide snapView
-    this._events.mouseLeaveSnapView = assignEvent(snapView, ['mouseleave', 'touchend'], () => {
-      this._state.snapViewVisible = false;
+    // REFACTOR: Use EventManager for snap view mouse leave event (Issue A1.5)
+    this.eventManager.on('mouseLeaveSnapView', snapView, ['mouseleave', 'touchend'], () => {
+      this._setSnapViewVisible(false);
       this.showSnapView();
     });
-
 
     if (!this._options.hasZoomButtons) {
       return;
     }
-    const {zoomOut, zoomIn} = this._elements;
+    const { zoomOut, zoomIn } = this._elements;
 
-
-    this._events.zoomInClick = assignEvent(zoomIn, ['click'], () => {
-      this.zoom(this._state.zoomValue + (this._options.zoomStep || 50));
+    // REFACTOR: Use EventManager for zoom button events (Issue A1.5)
+    this.eventManager.on('zoomInClick', zoomIn, ['click'], () => {
+      // P3-5 FIX: Explicit null checking with numeric default (use helper - Issue A1.7)
+      const zoomStep = this._getZoomStep();
+      this.zoom(this._state.zoomValue + zoomStep);
     });
 
-
-    this._events.zoomOutClick = assignEvent(zoomOut, ['click'], () => {
-      this.zoom(this._state.zoomValue - (this._options.zoomStep || 50));
+    this.eventManager.on('zoomOutClick', zoomOut, ['click'], () => {
+      // P3-5 FIX: Explicit null checking with numeric default (use helper - Issue A1.7)
+      const zoomStep = this._getZoomStep();
+      this.zoom(this._state.zoomValue - zoomStep);
     });
-  }
-
-  _pinchAndZoom() {
-    const {imageWrap, container} = this._elements;
-
-
-    // apply pinch and zoom feature
-    const onPinchStart = (eStart: TouchEvent) => {
-      const {loaded, zoomValue: startZoomValue} = this._state;
-      const {_events: events} = this;
-
-
-      if (!loaded) return;
-
-
-      const touch0 = eStart.touches[0];
-      const touch1 = eStart.touches[1];
-
-
-      if (!(touch0 && touch1)) {
-        return;
-      }
-
-
-      this._state.zooming = true;
-
-
-      const contOffset = container.getBoundingClientRect();
-
-
-      // find distance between two touch points
-      const startDist = getTouchPointsDistance(eStart.touches);
-
-
-      // find the center for the zoom
-      const center = {
-        x: (touch1.pageX + touch0.pageX) / 2 - (contOffset.left + document.body.scrollLeft),
-        y: (touch1.pageY + touch0.pageY) / 2 - (contOffset.top + document.body.scrollTop),
-      };
-
-
-      const moveListener = (eMove: TouchEvent) => {
-        // eMove.preventDefault();
-
-
-        const newDist = getTouchPointsDistance(eMove.touches);
-
-
-        const zoomValue = startZoomValue + (newDist - startDist) / 2;
-
-
-        this.zoom(zoomValue, center);
-      };
-
-
-      const endListener = (eEnd: TouchEvent) => {
-        // unbind events
-        if (events.pinchMove) events.pinchMove();
-        if (events.pinchEnd) events.pinchEnd();
-        this._state.zooming = false;
-        // properly resume move event if one finger remains
-        if (eEnd.touches.length === 1) {
-          this._sliders.imageSlider.startHandler(eEnd);
-        }
-      };
-
-
-      // remove events if already assigned
-      if (events.pinchMove) events.pinchMove();
-      if (events.pinchEnd) events.pinchEnd();
-
-
-      // assign events
-      events.pinchMove = assignEvent(document as any as HTMLElement, 'touchmove', moveListener);
-      events.pinchEnd = assignEvent(document as any as HTMLElement, 'touchend', endListener);
-    };
-
-
-    this._events.pinchStart = assignEvent(imageWrap, 'touchstart', onPinchStart);
-  }
-
-  _scrollZoom() {
-    /* Add zoom interaction in mouse wheel */
-    const {_options} = this;
-    const {container, imageWrap} = this._elements;
-
-
-    let changedDelta = 0;
-
-
-    const onMouseWheel = (e: WheelEvent) => {
-      const {loaded, zoomValue} = this._state;
-
-
-      if (!_options.zoomOnMouseWheel || !loaded) return;
-
-
-      // clear all animation frame and interval
-      this._clearFrames();
-
-
-      // cross-browser wheel delta
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const delta = Math.max(-1, Math.min(1, e.wheelDelta || -e.detail || -e.deltaY));
-
-
-      const newZoomValue = zoomValue * (100 + delta * ZOOM_CONSTANT) / 100;
-
-
-      if (!(newZoomValue >= 100 && newZoomValue <= _options.maxZoom)) {
-        changedDelta += Math.abs(delta);
-      } else {
-        changedDelta = 0;
-      }
-
-
-      e.preventDefault();
-
-
-      if (changedDelta > MOUSE_WHEEL_COUNT) return;
-
-
-      const contOffset = container.getBoundingClientRect();
-
-
-      const x = (e.pageX || e.pageX) - (contOffset.left + document.body.scrollLeft);
-      const y = (e.pageY || e.pageY) - (contOffset.top + document.body.scrollTop);
-
-
-      this.zoom(newZoomValue, {
-        x, y,
-      });
-
-
-      // show the snap viewer
-      this.showSnapView();
-    };
-
-
-    this._ev = assignEvent(imageWrap, 'wheel', onMouseWheel);
-  }
-
-  _doubleTapToZoom() {
-    const {imageWrap} = this._elements;
-    // handle double tap for zoom in and zoom out
-
-
-    let touchTime = 0;
-
-
-    let point: { x: number, y: number };
-
-
-    const onDoubleTap = (e: MouseEvent) => {
-      if (touchTime === 0) {
-        touchTime = Date.now();
-        point = {
-          x: e.pageX, y: e.pageY,
-        };
-      } else if (Date.now() - touchTime < 500 && Math.abs(e.pageX - point.x) < 50 && Math.abs(e.pageY - point.y) < 50) {
-        if (this._state.zoomValue === this._options.zoomValue) {
-          this.zoom(200);
-        } else {
-          this.resetZoom();
-        }
-        touchTime = 0;
-      } else {
-        touchTime = 0;
-      }
-    };
-
-
-    assignEvent(imageWrap, 'click', onDoubleTap);
   }
 
   _getImageCurrentDim() {
-    const {zoomValue, imageDim} = this._state;
+    const { zoomValue, imageDim } = this._state;
     return {
-      w: imageDim.w * (zoomValue / 100), h: imageDim.h * (zoomValue / 100),
+      w: imageDim.w * (zoomValue / 100),
+      h: imageDim.h * (zoomValue / 100),
     };
   }
 
+  /**
+   * Loads the main image and optional high-resolution image
+   * Shows loader, handles image load/error events, and triggers dimension calculation
+   */
+  /**
+   * REFACTOR: Handle successful image load - called by ImageLoader (Issue C3.1)
+   * Race condition checking is handled by ImageLoader, so this is only called for valid loads
+   * @param _loadId - The load operation ID (unused, kept for interface compatibility)
+   */
+  private _handleImageLoadSuccess(_loadId: number): void {
+    const { hiResImageSrc } = this._images;
+
+    // Load high resolution image if provided
+    if (hiResImageSrc) {
+      this.imageLoader.loadHighRes(hiResImageSrc);
+    }
+
+    // Set loaded flag and calculate dimensions
+    this._setLoaded(true);
+    this._calculateDimensions();
+
+    // Dispatch image load event
+    if (this._listeners.onImageLoaded) {
+      this._listeners.onImageLoaded(this._callbackData);
+    }
+
+    // Reset the zoom
+    this.resetZoom();
+  }
+
+  /**
+   * REFACTOR: Handle image load error - called by ImageLoader (Issue C3.1)
+   * Race condition checking is handled by ImageLoader, so this is only called for valid loads
+   * @param _loadId - The load operation ID (unused, kept for interface compatibility)
+   * @param error - The error event
+   */
+  private _handleImageLoadError(_loadId: number, error: Event | ErrorEvent): void {
+    if (this._listeners.onImageError) {
+      this._listeners.onImageError(error);
+    }
+  }
+
+  /**
+   * REFACTOR: Simplified image loading using ImageLoader (Issue C3.1)
+   * ImageLoader handles: URL validation, element creation, event setup, race conditions
+   * ImageViewer handles: state updates, snap view hiding
+   */
   _loadImages() {
-    const {_images, _elements} = this;
-    const {imageSrc, hiResImageSrc} = _images;
-    const {container, snapImageWrap, imageWrap} = _elements;
+    const { imageSrc, hiResImageSrc } = this._images;
 
+    if (!imageSrc) {
+      throw new Error('No image source provided');
+    }
 
-    const ivLoader = container.querySelector('.iv-loader');
-
-
-    // remove old images
-    remove(container.querySelectorAll('.iv-snap-image, .iv-image'));
-
-
-    // add snapView image
-    const snapImage = createElement({
-      tagName: 'img', className: 'iv-snap-image', insertBefore: snapImageWrap.firstChild, parent: snapImageWrap,
-    });
-    (snapImage as HTMLImageElement).src = String(imageSrc);
-
-
-    // add image
-    const image = createElement({
-      tagName: 'img', className: 'iv-image iv-small-image', parent: imageWrap,
-    });
-    (image as HTMLImageElement).src = String(imageSrc);
-
-
-    this._state.loaded = false;
-    // store image reference in _elements
-    this._elements.image = image;
-    this._elements.snapImage = snapImage;
-    css(ivLoader, {display: 'block'});
-
-
-    // keep visibility hidden until image is loaded
-    css(image, {visibility: 'hidden'});
-    // hide snap view if open
+    // Reset state
+    this._setLoaded(false);
     this.hideSnapView();
-    const onImageLoad = () => {
-      // hide the iv loader
-      css(ivLoader, {display: 'none'});
 
-
-      // show the image
-      css(image, {visibility: 'visible'});
-
-
-      // load high resolution image if provided
-      if (hiResImageSrc) {
-        this._loadHighResImage(hiResImageSrc);
-      }
-
-
-      // set loaded flag to true
-      this._state.loaded = true;
-
-
-      // calculate the dimension
-      this._calculateDimensions();
-
-      // dispatch image load event
-      if (this._listeners.onImageLoaded) {
-        this._listeners.onImageLoaded(this._callbackData);
-      }
-
-
-      // reset the zoom
-      this.resetZoom();
-    };
-
-
-    const onImageError = (e: any) => {
-      css(ivLoader, {display: 'none'});
-      if (this._listeners.onImageError) {
-        this._listeners.onImageError(e);
-      }
-    }
-
-
-    if (imageLoaded(image)) {
-      onImageLoad();
-    } else {
-      this._events.imageLoad = assignEvent(image, 'load', onImageLoad);
-      this._events.imageError = assignEvent(image, 'error', onImageError);
-    }
+    // REFACTOR: Delegate image loading to ImageLoader (Issue C3.1)
+    // ImageLoader handles all loading logic including race conditions, validation, and UI
+    this.imageLoader.load(imageSrc, hiResImageSrc);
   }
 
-  _loadHighResImage(hiResImageSrc: string) {
-    const {imageWrap, container} = this._elements;
+  /**
+   * Calculates and stores dimensions for container, image, snap view, and zoom slider
+   * Ensures image fits container while maintaining aspect ratio
+   * Called after image load and on refresh
+   * REFACTOR: Uses DimensionCalculator for dimension calculations (Issue C3.1/C3.4)
+   */
 
-
-    const lowResImg = this._elements.image;
-
-
-    const hiResImage = createElement({
-      tagName: 'img',
-      className: 'iv-image iv-large-image',
-      src: hiResImageSrc,
-      parent: imageWrap,
-      style: lowResImg.style.cssText,
-    });
-
-
-    // add all the style attributes from lowResImg to highResImg
-    hiResImage.style.cssText = lowResImg.style.cssText;
-
-
-    this._elements.image = container.querySelectorAll('.iv-image');
-
-
-    const onHighResImageLoad = () => {
-      // remove the low size image and set this image as default image
-      remove(lowResImg);
-      this._elements.image = hiResImage;
-      // this._calculateDimensions();
-    };
-
-
-    if (imageLoaded(hiResImage)) {
-      onHighResImageLoad();
-    } else {
-      this._events.hiResImageLoad = assignEvent(hiResImage, 'load', onHighResImageLoad);
-    }
-  }
-
+  /**
+   * REFACTOR: Main dimension calculation orchestrator (Issue C3.4/C3.1)
+   * Coordinates calculation and application of all viewer dimensions
+   * Now uses DimensionCalculator for cleaner separation of concerns
+   */
   _calculateDimensions() {
-    const {image, container, snapView, snapImage, zoomHandle} = this._elements;
+    const { image, container, snapView, snapImage, zoomHandle } = this._elements;
 
+    // Get current element dimensions
+    const imageWidth = parseInt(getStyle(image, 'width'), 10);
+    const imageHeight = parseInt(getStyle(image, 'height'), 10);
+    const contWidth = parseInt(getStyle(container, 'width'), 10);
+    const contHeight = parseInt(getStyle(container, 'height'), 10);
 
-    // calculate content width of image and snap image
-    const imageWidth = parseInt(<string>css(image, 'width'), 10);
-    const imageHeight = parseInt(<string>css(image, 'height'), 10);
+    // Update container dimensions in state
+    this._setContainerDim({ w: contWidth, h: contHeight });
 
+    // Get natural image dimensions
+    const imgOriginWidth = (image as HTMLImageElement).naturalWidth || imageWidth;
+    const imgOriginHeight = (image as HTMLImageElement).naturalHeight || imageHeight;
 
-    const contWidth = parseInt(<string>css(container, 'width'), 10);
-    const contHeight = parseInt(<string>css(container, 'height'), 10);
+    // Calculate fitted image dimensions (use DimensionCalculator - Issue C3.1/C3.4)
+    const imageDim = DimensionCalculator.calculateFittedImageDimensions(
+      { w: contWidth, h: contHeight },
+      imgOriginWidth,
+      imgOriginHeight,
+    );
+    this._setImageDim(imageDim);
 
-
-    const snapViewWidth = snapView.clientWidth;
-    const snapViewHeight = snapView.clientHeight;
-
-
-    // set the container dimension
-    this._state.containerDim = {
-      w: contWidth, h: contHeight,
-    };
-
-
-    const imgOriginWidth = image.naturalWidth || imageWidth
-    const imgOriginHeight = image.naturalHeight || imageHeight;
-
-
-    const ratio = imgOriginWidth / imgOriginHeight;
-    // set the image dimension
-    const imgWidth = (imgOriginWidth > imgOriginHeight && contHeight >= contWidth) || ratio * contHeight > contWidth ? contWidth : ratio * contHeight;
-
-
-    const imgHeight = imgWidth / ratio;
-
-
-    this._state.imageDim = {
-      w: imgWidth, h: imgHeight,
-    };
-
-
-    // reset image position and zoom
-    css(image, {
-      width: `${imgWidth}px`,
-      height: `${imgHeight}px`,
-      left: `${(contWidth - imgWidth) / 2}px`,
-      top: `${(contHeight - imgHeight) / 2}px`,
+    // Apply image dimensions and center it
+    setStyle(image, {
+      width: `${imageDim.w}px`,
+      height: `${imageDim.h}px`,
+      left: `${(contWidth - imageDim.w) / 2}px`,
+      top: `${(contHeight - imageDim.h) / 2}px`,
       maxWidth: 'none',
       maxHeight: 'none',
     });
 
-
-    // set the snap Image dimension
-    const snapWidth = imgWidth > imgHeight ? snapViewWidth : imgWidth * snapViewHeight / imgHeight;
-    const snapHeight = imgHeight > imgWidth ? snapViewHeight : imgHeight * snapViewWidth / imgWidth;
-
-
-    this._state.snapImageDim = {
-      w: snapWidth, h: snapHeight,
+    // Calculate snap view dimensions (use DimensionCalculator - Issue C3.1/C3.4)
+    const snapViewDim = {
+      w: snapView.clientWidth,
+      h: snapView.clientHeight,
     };
+    const snapDim = DimensionCalculator.calculateSnapImageDimensions(imageDim, snapViewDim);
+    this._setSnapImageDim(snapDim);
 
-
-    css(snapImage, {
-      width: `${snapWidth}px`, height: `${snapHeight}px`,
+    // Apply snap image dimensions
+    setStyle(snapImage, {
+      width: `${snapDim.w}px`,
+      height: `${snapDim.h}px`,
     });
 
-
-    const zoomSlider = snapView.querySelector('.iv-zoom-slider').clientWidth;
-    // calculate zoom slider area
-    this._state.zoomSliderLength = zoomSlider - zoomHandle.offsetWidth;
+    // Calculate zoom slider length
+    const zoomSliderElem = snapView.querySelector('.iv-zoom-slider');
+    if (!zoomSliderElem) {
+      throw new Error('Zoom slider element not found');
+    }
+    const zoomSlider = zoomSliderElem.clientWidth;
+    this._setZoomSliderLength(zoomSlider - zoomHandle.offsetWidth);
   }
 
+  /**
+   * Resets zoom to the initial zoomValue and centers the image
+   * @param animate - Whether to animate the zoom transition (default: true)
+   * @example
+   * ```typescript
+   * viewer.resetZoom(); // Animated reset
+   * viewer.resetZoom(false); // Instant reset
+   * ```
+   */
   resetZoom(animate = true) {
-    const {zoomValue} = this._options;
-
+    const { zoomValue } = this._options;
 
     if (!animate) {
-      this._state.zoomValue = zoomValue;
+      this._setZoomValue(zoomValue);
     }
-
 
     this.zoom(zoomValue);
   }
 
-  zoom = (perc: number, point?: any) => {
-    const {_options, _elements, _state} = this;
-    const {zoomValue: curPerc, imageDim, containerDim, zoomSliderLength} = _state;
-    const {image, zoomHandle} = _elements;
-    const {maxZoom} = _options;
+  /**
+   * Zooms the image to a specific percentage
+   * REFACTOR: Simplified using ZoomAnimation helper (Issue A1.2/C3.3)
+   * Animates over 16 frames using easeOutQuart easing
+   * Automatically constrains image position to prevent showing empty space
+   * @param perc - Zoom percentage (clamped between 100 and maxZoom)
+   * @param point - Optional zoom center point {x, y} relative to container (defaults to center)
+   * @example
+   * ```typescript
+   * viewer.zoom(200); // Zoom to 200% centered
+   * viewer.zoom(300, { x: 100, y: 100 }); // Zoom to 300% at specific point
+   * ```
+   */
+  zoom(perc: number, point?: { x: number; y: number }): void {
+    const { _options, _elements, _state } = this;
+    const { zoomValue: curPerc, imageDim, containerDim, zoomSliderLength } = _state;
+    const { image, zoomHandle } = _elements;
+    const { maxZoom } = _options;
 
-
+    // Normalize parameters
     perc = Math.round(Math.max(100, perc));
     perc = Math.min(maxZoom, perc);
 
+    // P3-5 FIX: Explicit null checking for optional parameter
+    const zoomPoint =
+      point !== undefined && point !== null
+        ? point
+        : {
+            x: containerDim.w / 2,
+            y: containerDim.h / 2,
+          };
 
-    point = point || {
-      x: containerDim.w / 2, y: containerDim.h / 2,
-    };
+    // P2-7 FIX: Add fallback for parseFloat to prevent NaN (use getStyle - Issue A1.10)
+    const curLeft = parseStyleFloat(image, 'left');
+    const curTop = parseStyleFloat(image, 'top');
 
-
-    const curLeft = parseFloat(<string>css(image, 'left'));
-    const curTop = parseFloat(<string>css(image, 'top'));
-
-
-    // clear any panning frames
+    // Clear any panning frames
     this._clearFrames();
 
+    // Calculate bounds for position constraints
+    const bounds: ZoomBounds = {
+      baseLeft: (containerDim.w - imageDim.w) / 2,
+      baseTop: (containerDim.h - imageDim.h) / 2,
+      baseRight: containerDim.w - (containerDim.w - imageDim.w) / 2,
+      baseBottom: containerDim.h - (containerDim.h - imageDim.h) / 2,
+    };
 
+    // Create animation helper (Issue A1.2/C3.3)
+    const animation = new ZoomAnimation({
+      currentZoom: curPerc,
+      targetZoom: perc,
+      currentLeft: curLeft,
+      currentTop: curTop,
+      zoomPoint,
+      imageDim,
+      bounds,
+      totalFrames: ImageViewer.ZOOM_ANIMATION_FRAMES,
+    });
+
+    // Animate zoom for smooth transition
     let step = 0;
-
-
-    const baseLeft = (containerDim.w - imageDim.w) / 2;
-    const baseTop = (containerDim.h - imageDim.h) / 2;
-    const baseRight = containerDim.w - baseLeft;
-    const baseBottom = containerDim.h - baseTop;
-
-
-    const zoom = () => {
+    const animateFrame = () => {
       step++;
 
-
-      if (step < 16) {
-        this._frames.zoomFrame = requestAnimationFrame(zoom);
+      if (step < ImageViewer.ZOOM_ANIMATION_FRAMES) {
+        this._frames.zoomFrame = requestAnimationFrame(animateFrame);
       }
 
+      // Get calculated frame data from animation helper
+      const frame = animation.getFrame(step);
 
-      const tickZoom = easeOutQuart(step, curPerc, perc - curPerc, 16);
-      const ratio = tickZoom / curPerc;
-
-
-      const imgWidth = imageDim.w * tickZoom / 100;
-      const imgHeight = imageDim.h * tickZoom / 100;
-
-
-      let newLeft = -((point.x - curLeft) * ratio - point.x);
-      let newTop = -((point.y - curTop) * ratio - point.y);
-
-
-      // fix for left and top
-      newLeft = Math.min(newLeft, baseLeft);
-      newTop = Math.min(newTop, baseTop);
-
-
-      // fix for right and bottom
-      if (newLeft + imgWidth < baseRight) {
-        newLeft = baseRight - imgWidth; // newLeft - (newLeft + imgWidth - baseRight)
-      }
-
-
-      if (newTop + imgHeight < baseBottom) {
-        newTop = baseBottom - imgHeight; // newTop + (newTop + imgHeight - baseBottom)
-      }
-
-
-      css(image, {
-        height: `${imgHeight}px`, width: `${imgWidth}px`, left: `${newLeft}px`, top: `${newTop}px`,
+      // Update image styles
+      setStyle(image, {
+        width: `${frame.width}px`,
+        height: `${frame.height}px`,
+        left: `${frame.left}px`,
+        top: `${frame.top}px`,
       });
 
+      // Update state
+      this._setZoomValue(frame.zoom);
 
-      this._state.zoomValue = tickZoom;
+      // Update snap handle to match new image size/position
+      this._resizeSnapHandle(frame.width, frame.height, frame.left, frame.top);
 
-
-      this._resizeSnapHandle(imgWidth, imgHeight, newLeft, newTop);
-
-
-      // update zoom handle position
-      css(zoomHandle, {
-        left: `${(tickZoom - 100) * (zoomSliderLength || 0) / (maxZoom - 100)}px`,
+      // Update zoom slider handle position
+      setStyle(zoomHandle, {
+        left: `${((frame.zoom - 100) * (zoomSliderLength || 0)) / (maxZoom - 100)}px`,
       });
 
-
-      // dispatch zoom changed event
+      // Dispatch zoom changed event
       if (this._listeners.onZoomChange) {
         this._listeners.onZoomChange(this._callbackData);
       }
     };
 
+    animateFrame();
+  }
 
-    zoom();
-  };
+  /**
+   * Clears all active animation frames and intervals
+   * Prevents multiple animations from running simultaneously
+   */
+  _clearFrames(): void {
+    const { slideMomentumCheck, sliderMomentumFrame, zoomFrame, snapViewTimeout } = this._frames;
 
-  _clearFrames = () => {
-    const { slideMomentumCheck, sliderMomentumFrame, zoomFrame } = this._frames;
-
-    if(slideMomentumCheck) clearInterval(slideMomentumCheck);
+    // P2-4 FIX: slideMomentumCheck now uses requestAnimationFrame
+    if (typeof slideMomentumCheck === 'number') {
+      cancelAnimationFrame(slideMomentumCheck);
+    }
     if (typeof sliderMomentumFrame === 'number') {
       cancelAnimationFrame(sliderMomentumFrame);
     }
     if (typeof zoomFrame === 'number') {
       cancelAnimationFrame(zoomFrame);
     }
-  };
+    // MEMORY LEAK FIX: Clear snapView timeout to prevent callbacks after destroy
+    if (typeof snapViewTimeout === 'number') {
+      clearTimeout(snapViewTimeout);
+    }
+  }
 
+  /**
+   * Updates snap handle size and position based on current image dimensions
+   * The snap handle represents the visible viewport area within the snap view
+   * @param imgWidth - Current image width (optional, calculated if not provided)
+   * @param imgHeight - Current image height (optional, calculated if not provided)
+   * @param imgLeft - Current image left position (optional, calculated if not provided)
+   * @param imgTop - Current image top position (optional, calculated if not provided)
+   */
+  _resizeSnapHandle(imgWidth: number, imgHeight: number, imgLeft: number, imgTop: number): void {
+    const { _elements, _state } = this;
+    const { snapHandle, image } = _elements;
+    const { imageDim, containerDim, zoomValue, snapImageDim } = _state;
 
-  _resizeSnapHandle = (imgWidth: number, imgHeight: number, imgLeft: number, imgTop: number) => {
-    const {_elements, _state} = this;
-    const {snapHandle, image} = _elements;
-    const {imageDim, containerDim, zoomValue, snapImageDim} = _state;
+    const imageWidth = imgWidth || (imageDim.w * zoomValue) / 100;
+    const imageHeight = imgHeight || (imageDim.h * zoomValue) / 100;
+    // P2-7 FIX: Add fallback for parseFloat to prevent NaN (use getStyle - Issue A1.10)
+    const imageLeft = imgLeft || parseStyleFloat(image, 'left');
+    const imageTop = imgTop || parseStyleFloat(image, 'top');
 
+    // P2-6 FIX: Prevent division by zero
+    const left = imageWidth !== 0 ? (-imageLeft * snapImageDim.w) / imageWidth : 0;
+    const top = imageHeight !== 0 ? (-imageTop * snapImageDim.h) / imageHeight : 0;
 
-    const imageWidth = imgWidth || imageDim.w * zoomValue / 100;
-    const imageHeight = imgHeight || imageDim.h * zoomValue / 100;
-    const imageLeft = imgLeft || parseFloat(<string>css(image, 'left'));
-    const imageTop = imgTop || parseFloat(<string>css(image, 'top'));
+    const handleWidth = imageWidth !== 0 ? (containerDim.w * snapImageDim.w) / imageWidth : 0;
+    const handleHeight = imageHeight !== 0 ? (containerDim.h * snapImageDim.h) / imageHeight : 0;
 
-
-    const left = -imageLeft * snapImageDim.w / imageWidth;
-    const top = -imageTop * snapImageDim.h / imageHeight;
-
-
-    const handleWidth = (containerDim.w * snapImageDim.w) / imageWidth;
-    const handleHeight = (containerDim.h * snapImageDim.h) / imageHeight;
-
-
-    css(snapHandle, {
-      top: `${top}px`, left: `${left}px`, width: `${handleWidth}px`, height: `${handleHeight}px`,
+    setStyle(snapHandle, {
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${handleWidth}px`,
+      height: `${handleHeight}px`,
     });
 
+    this._setSnapHandleDim({
+      w: handleWidth,
+      h: handleHeight,
+    });
+  }
 
-    this._state.snapHandleDim = {
-      w: handleWidth, h: handleHeight,
-    };
-  };
-
-  showSnapView = (noTimeout?: boolean) => {
-    const {snapViewVisible, zoomValue, loaded} = this._state;
-    const {snapView} = this._elements;
-
+  /**
+   * Shows the snap view (minimap) when zoomed in
+   * Auto-hides after 1500ms unless noTimeout is true
+   * @param noTimeout - If true, keeps snap view visible without auto-hide
+   * @example
+   * ```typescript
+   * viewer.showSnapView(); // Shows for 1500ms
+   * viewer.showSnapView(true); // Shows until manually hidden
+   * ```
+   */
+  showSnapView(noTimeout?: boolean): void {
+    const { snapViewVisible, zoomValue, loaded } = this._state;
+    const { snapView } = this._elements;
 
     if (!this._options.snapView) return;
 
-
     if (snapViewVisible || zoomValue <= 100 || !loaded) return;
-
 
     clearTimeout(this._frames.snapViewTimeout);
 
+    this._setSnapViewVisible(true);
 
-    this._state.snapViewVisible = true;
-
-
-    css(snapView, {opacity: 1, pointerEvents: 'inherit'});
-
+    setStyle(snapView, { opacity: '1', 'pointer-events': 'inherit' });
 
     if (!noTimeout) {
-      this._frames.snapViewTimeout = setTimeout(this.hideSnapView, 1500);
+      // Auto-hide snap view after timeout
+      this._frames.snapViewTimeout = setTimeout(
+        () => this.hideSnapView(),
+        ImageViewer.SNAP_VIEW_TIMEOUT_MS,
+      );
     }
-  };
-
-  hideSnapView = () => {
-    const {snapView} = this._elements;
-    css(snapView, {opacity: 0, pointerEvents: 'none'});
-    this._state.snapViewVisible = false;
-  };
-
-  refresh = () => {
-    this._calculateDimensions();
-    this.resetZoom();
-  };
-
-  load(imageSrc: string, hiResImageSrc: string) {
-    this._images = {
-      imageSrc, hiResImageSrc,
-    };
-
-
-    this._loadImages();
   }
 
-  destroy() {
-    const {container, domElement} = this._elements;
-    // destroy all the sliders
-    Object.entries(this._sliders).forEach(([, slider]: [string, Slider]) => {
-      slider.destroy();
-    });
+  /**
+   * Hides the snap view (minimap)
+   * @example
+   * ```typescript
+   * viewer.hideSnapView();
+   * ```
+   */
+  hideSnapView(): void {
+    const { snapView } = this._elements;
+    setStyle(snapView, { opacity: '0', 'pointer-events': 'none' });
+    this._setSnapViewVisible(false);
+  }
 
+  /**
+   * Recalculates dimensions and resets zoom
+   * Useful after container resize or orientation change
+   * @example
+   * ```typescript
+   * window.addEventListener('resize', () => viewer.refresh());
+   * ```
+   */
+  refresh(): void {
+    this._calculateDimensions();
+    this.resetZoom();
+  }
 
-    // unbind all events
-    Object.entries(this._events).forEach(([, unbindEvent]: [string, () => void]) => {
-      unbindEvent();
-    });
+  /**
+   * Loads a new image into the viewer
+   * @param imageSrc - URL of the image to load
+   * @param hiResImageSrc - Optional URL of high-resolution version
+   * @example
+   * ```typescript
+   * viewer.load('path/to/image.jpg');
+   * viewer.load('thumb.jpg', 'fullsize.jpg');
+   * ```
+   */
+  load(imageSrc: string, hiResImageSrc: string) {
+    // P3-4 FIX: Add error handling for image loading
+    try {
+      // REFACTOR: Use _setImageSources for validation and assignment (Issue E2.10)
+      this._setImageSources({ imageSrc, hiResImageSrc });
 
-
-    // clear all the frames
-    this._clearFrames();
-
-
-    // remove html from the container
-    remove(container.querySelector('.iv-wrap'));
-
-
-    // remove iv-container class from container
-    removeClass(container, 'iv-container');
-
-
-    // remove added style from container
-    removeCss(document.querySelector('html') as HTMLElement, 'relative');
-
-
-    // if container has original image, unwrap the image and remove the class
-    // which will happen when domElement is not the container
-    if (domElement !== container) {
-      unwrap(domElement);
+      this._loadImages();
+    } catch (error) {
+      console.error('ImageViewer: Failed to load image', error);
+      if (this._listeners.onImageError) {
+        // Create an ErrorEvent for the callback
+        const errorEvent = new ErrorEvent('error', {
+          error: error instanceof Error ? error : new Error(String(error)),
+          message: error instanceof Error ? error.message : String(error),
+        });
+        this._listeners.onImageError(errorEvent);
+      }
+      throw error; // Re-throw to let callers handle it
     }
+  }
 
+  /**
+   * Destroys the viewer instance and cleans up all resources
+   * Removes event listeners, sliders, frames, and DOM elements
+   * Restores the original element state if it was an IMG tag
+   * @example
+   * ```typescript
+   * viewer.destroy();
+   * ```
+   */
+  destroy() {
+    // P3-4 FIX: Add error handling for cleanup operations
+    try {
+      const { container, domElement } = this._elements;
 
-    // remove imageViewer reference from dom element
-    domElement._imageViewer = null;
+      // destroy all the sliders (use helper - Issue E2.5)
+      this._destroySlider('imageSlider');
+      this._destroySlider('snapSlider');
+      this._destroySlider('zoomSlider');
 
+      // REFACTOR: Destroy ImageLoader to cancel any pending loads (Issue C3.1)
+      this.imageLoader.destroy();
 
-    if (this._listeners.onDestroy) {
-      this._listeners.onDestroy();
+      // REFACTOR: Destroy InteractionManager (Phase 7)
+      this.interactionManager.destroy();
+
+      // REFACTOR: Destroy EventManager to remove all managed events (Issue A1.5, Phase 6)
+      // All events now managed by EventManager (including FullScreen and InteractionManager)
+      this.eventManager.destroy();
+
+      // clear all the frames
+      this._clearFrames();
+
+      // REFACTOR: Use ImageViewerDOM for DOM cleanup (Phase 8)
+      this.dom.destroy(domElement, container);
+
+      // remove imageViewer reference from dom element
+      (domElement as HTMLElementWithViewer)._imageViewer = null;
+
+      if (this._listeners.onDestroy) {
+        this._listeners.onDestroy();
+      }
+    } catch (error) {
+      console.error('ImageViewer: Error during destroy', error);
+      // Don't re-throw - we want destroy to always complete
     }
   }
 }
-
 
 ImageViewer.defaults = {
   zoomValue: 100,
@@ -1187,9 +1199,12 @@ ImageViewer.defaults = {
   hasZoomButtons: false,
   zoomStep: 50,
   listeners: {
-    onInit: null, onDestroy: null, onImageLoaded: null, onZoomChange: null, onImageError: null
+    onInit: undefined,
+    onDestroy: undefined,
+    onImageLoaded: undefined,
+    onZoomChange: undefined,
+    onImageError: undefined,
   },
 };
-
 
 export default ImageViewer;
