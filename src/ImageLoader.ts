@@ -184,6 +184,11 @@ export class ImageLoader {
     snapImage: HTMLElement;
     image: HTMLImageElement;
   } {
+    // Defense in depth: validate again before assigning src to DOM elements
+    if (!isValidImageUrl(imageSrc)) {
+      throw new Error(`Invalid or unsafe image URL: ${imageSrc}`);
+    }
+
     const { snapImageWrap, imageWrap } = this.elements;
     if (!snapImageWrap || !imageWrap) {
       throw new Error('Image wrap elements not found');
