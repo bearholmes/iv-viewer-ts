@@ -1,21 +1,27 @@
 import ImageViewer from '../../dist/iv-viewer-ts.mjs';
 
-const images = [{
-  small: '../images/1.jpg',
-  big: '../images/1_big.jpg',
-}, {
-  small: '../images/2.jpg',
-  big: '../images/2_big.jpg',
-}, {
-  small: '../images/3.jpg',
-  big: '../images/3_big.jpg',
-}, {
-  small: '../images/4.jpg',
-  big: '../images/4_big.jpg',
-}, {
-  small: '../images/5.png',
-  big: '',
-}];
+const images = [
+  {
+    small: '../images/1.jpg',
+    big: '../images/1_big.jpg',
+  },
+  {
+    small: '../images/2.jpg',
+    big: '../images/2_big.jpg',
+  },
+  {
+    small: '../images/3.jpg',
+    big: '../images/3_big.jpg',
+  },
+  {
+    small: '../images/4.jpg',
+    big: '../images/4_big.jpg',
+  },
+  {
+    small: '../images/5.png',
+    big: '',
+  },
+];
 
 let curImageIdx = 1;
 
@@ -28,7 +34,7 @@ window.viewer = viewer;
 // display total count
 wrapper.querySelector('.total').innerHTML = total;
 
-function showImage () {
+function showImage() {
   const imgObj = images[curImageIdx - 1];
   viewer.load(imgObj.small, imgObj.big);
   curSpan.innerHTML = curImageIdx;

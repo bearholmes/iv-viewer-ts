@@ -264,7 +264,8 @@ export function setStyle(
         // Basic sanitization to strip angle/quote characters from inline CSS values
         const sanitizedValue = stringValue.replace(/[<>'"]/g, '');
 
-        element.style.setProperty(key, sanitizedValue);
+        // Use direct property assignment for camelCase compatibility
+        (element.style as any)[key] = sanitizedValue;
       });
     }
   });
@@ -394,7 +395,13 @@ export function assignEvent(
   handler: EventListener,
 ): () => void {
   const eventList = Array.isArray(events) ? events : [events];
-  eventList.forEach((event) => element.addEventListener(event, handler));
+
+  // Use passive: false for wheel events to allow preventDefault
+  const options: AddEventListenerOptions | undefined = eventList.some((e) => e === 'wheel')
+    ? { passive: false }
+    : undefined;
+
+  eventList.forEach((event) => element.addEventListener(event, handler, options));
 
   return () => {
     eventList.forEach((event) => element.removeEventListener(event, handler));

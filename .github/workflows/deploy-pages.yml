@@ -24,13 +24,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build library
+        run: npm run build
+
+      - name: Prepare Pages content
+        run: |
+          mkdir -p pages-dist/dist
+          cp -R example/* pages-dist/
+          cp -R dist/* pages-dist/dist/
+
+          # Fix paths for GitHub Pages (add /iv-viewer-ts/ base path)
+          find pages-dist -name "*.html" -type f -exec sed -i 's|href="\./|href="/iv-viewer-ts/|g' {} \;
+          find pages-dist -name "*.html" -type f -exec sed -i 's|href="\.\./\.\./\.\./dist/|href="/iv-viewer-ts/dist/|g' {} \;
+          find pages-dist -name "*.html" -type f -exec sed -i 's|href="\.\./\.\./dist/|href="/iv-viewer-ts/dist/|g' {} \;
+          find pages-dist -name "*.html" -type f -exec sed -i 's|href="\.\./|href="/iv-viewer-ts/|g' {} \;
+          find pages-dist -name "*.html" -type f -exec sed -i 's|src="\.\./|src="/iv-viewer-ts/|g' {} \;
+          find pages-dist -name "*.html" -type f -exec sed -i 's|href="index\.css"|href="/iv-viewer-ts/index.css"|g' {} \;
+
+          find pages-dist -name "*.js" -type f -exec sed -i "s|from '\.\./\.\./dist/|from '/iv-viewer-ts/dist/|g" {} \;
+          find pages-dist -name "*.js" -type f -exec sed -i "s|from '\.\./dist/|from '/iv-viewer-ts/dist/|g" {} \;
+          find pages-dist -name "*.js" -type f -exec sed -i "s|small: '\.\./images/|small: '/iv-viewer-ts/images/|g" {} \;
+          find pages-dist -name "*.js" -type f -exec sed -i "s|big: '\.\./images/|big: '/iv-viewer-ts/images/|g" {} \;
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        with:
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './example'
+          path: './pages-dist'
 
       - name: Deploy to GitHub Pages
         id: deployment

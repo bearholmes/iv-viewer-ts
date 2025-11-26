@@ -26,10 +26,11 @@ export declare class ImageLoader {
     private elements;
     private onLoadSuccess;
     private onLoadError;
+    private onHighResLoaded?;
     private loadCounter;
     private activeLoads;
     private static readonly ALLOWED_PROTOCOLS;
-    constructor(elements: Partial<ViewerElements>, onLoadSuccess: (loadId: number) => void, onLoadError: (loadId: number, error: Event | ErrorEvent) => void);
+    constructor(elements: Partial<ViewerElements>, onLoadSuccess: (loadId: number) => void, onLoadError: (loadId: number, error: Event | ErrorEvent) => void, onHighResLoaded?: () => void);
     /**
      * Loads an image with optional high-resolution version
      * Returns a load ID for race condition tracking

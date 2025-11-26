@@ -120,6 +120,7 @@ class ImageViewer {
       this._elements,
       (loadId) => this._handleImageLoadSuccess(loadId),
       (loadId, error) => this._handleImageLoadError(loadId, error),
+      () => this._handleHighResLoaded(),
     );
 
     // REFACTOR: Initialize EventManager for centralized event management (Issue A1.5)
@@ -394,8 +395,8 @@ class ImageViewer {
     // REFACTOR: DOM initialization now handled by ImageViewerDOM (Phase 8)
 
     // initialize slider
-    this._initImageSlider();
     this._initSnapSlider();
+    this._initImageSlider();
     this._initZoomSlider();
 
     // REFACTOR: Setup interactions using InteractionManager (Phase 7)
@@ -419,6 +420,10 @@ class ImageViewer {
     const { _elements } = this;
 
     const { imageWrap } = _elements;
+
+    if (!imageWrap) {
+      throw new Error('imageWrap element not found');
+    }
 
     let positions: { x: number; y: number }[];
     let currentPos: { dx: number; dy: number; mx: number; my: number } | undefined;
@@ -780,6 +785,15 @@ class ImageViewer {
     if (this._listeners.onImageError) {
       this._listeners.onImageError(error);
     }
+  }
+
+  /**
+   * Handle high-resolution image load complete
+   * Recalculates dimensions with the correct image size
+   */
+  private _handleHighResLoaded(): void {
+    this._calculateDimensions();
+    this.resetZoom(false); // Reset without animation
   }
 
   /**

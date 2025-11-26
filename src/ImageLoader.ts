@@ -33,6 +33,7 @@ export class ImageLoader {
     private elements: Partial<ViewerElements>,
     private onLoadSuccess: (loadId: number) => void,
     private onLoadError: (loadId: number, error: Event | ErrorEvent) => void,
+    private onHighResLoaded?: () => void,
   ) {}
 
   /**
@@ -153,6 +154,11 @@ export class ImageLoader {
       // Remove low-res image and replace with high-res
       remove(lowResImg);
       this.elements.image = hiResImage as HTMLImageElement;
+
+      // Notify that high-res image is loaded
+      if (this.onHighResLoaded) {
+        this.onHighResLoaded();
+      }
     };
 
     if (imageLoaded(hiResImage as HTMLImageElement)) {

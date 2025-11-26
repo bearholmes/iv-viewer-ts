@@ -134,6 +134,11 @@ declare class ImageViewer {
      */
     private _handleImageLoadError;
     /**
+     * Handle high-resolution image load complete
+     * Recalculates dimensions with the correct image size
+     */
+    private _handleHighResLoaded;
+    /**
      * REFACTOR: Simplified image loading using ImageLoader (Issue C3.1)
      * ImageLoader handles: URL validation, element creation, event setup, race conditions
      * ImageViewer handles: state updates, snap view hiding

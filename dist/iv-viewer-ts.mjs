@@ -119,7 +119,7 @@ function setStyle(elements, properties) {
           throw new Error("Blocked unsafe CSS value");
         }
         const sanitizedValue = stringValue.replace(/[<>'"]/g, "");
-        element.style.setProperty(key, sanitizedValue);
+        element.style[key] = sanitizedValue;
       });
     }
   });
@@ -170,7 +170,8 @@ function clamp(num, min, max) {
 }
 function assignEvent(element, events, handler) {
   const eventList = Array.isArray(events) ? events : [events];
-  eventList.forEach((event) => element.addEventListener(event, handler));
+  const options = eventList.some((e) => e === "wheel") ? { passive: false } : void 0;
+  eventList.forEach((event) => element.addEventListener(event, handler, options));
   return () => {
     eventList.forEach((event) => element.removeEventListener(event, handler));
   };
@@ -503,12 +504,13 @@ class ViewerHTMLTemplates {
   }
 }
 const _ImageLoader = class _ImageLoader {
-  constructor(elements, onLoadSuccess, onLoadError) {
+  constructor(elements, onLoadSuccess, onLoadError, onHighResLoaded) {
     __publicField(this, "loadCounter", 0);
     __publicField(this, "activeLoads", /* @__PURE__ */ new Map());
     this.elements = elements;
     this.onLoadSuccess = onLoadSuccess;
     this.onLoadError = onLoadError;
+    this.onHighResLoaded = onHighResLoaded;
   }
   /**
    * Loads an image with optional high-resolution version
@@ -597,6 +599,9 @@ const _ImageLoader = class _ImageLoader {
     const onHighResImageLoad = () => {
       remove(lowResImg);
       this.elements.image = hiResImage;
+      if (this.onHighResLoaded) {
+        this.onHighResLoaded();
+      }
     };
     if (imageLoaded(hiResImage)) {
       onHighResImageLoad();
@@ -1373,7 +1378,8 @@ const _ImageViewer = class _ImageViewer {
     this.imageLoader = new ImageLoader(
       this._elements,
       (loadId) => this._handleImageLoadSuccess(loadId),
-      (loadId, error) => this._handleImageLoadError(loadId, error)
+      (loadId, error) => this._handleImageLoadError(loadId, error),
+      () => this._handleHighResLoaded()
     );
     this.eventManager = new EventManager();
     this.interactionManager = new InteractionManager(
@@ -1563,8 +1569,8 @@ const _ImageViewer = class _ImageViewer {
     momentum();
   }
   _init() {
-    this._initImageSlider();
     this._initSnapSlider();
+    this._initImageSlider();
     this._initZoomSlider();
     this.interactionManager.setupInteractions();
     this._initEvents();
@@ -1580,6 +1586,9 @@ const _ImageViewer = class _ImageViewer {
   _initImageSlider() {
     const { _elements } = this;
     const { imageWrap } = _elements;
+    if (!imageWrap) {
+      throw new Error("imageWrap element not found");
+    }
     let positions;
     let currentPos;
     const sliderCoordinator = new SliderCoordinator(this._getSlider("snapSlider"), {
@@ -1833,6 +1842,14 @@ const _ImageViewer = class _ImageViewer {
     if (this._listeners.onImageError) {
       this._listeners.onImageError(error);
     }
+  }
+  /**
+   * Handle high-resolution image load complete
+   * Recalculates dimensions with the correct image size
+   */
+  _handleHighResLoaded() {
+    this._calculateDimensions();
+    this.resetZoom(false);
   }
   /**
    * REFACTOR: Simplified image loading using ImageLoader (Issue C3.1)
