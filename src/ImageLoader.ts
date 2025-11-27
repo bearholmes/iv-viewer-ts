@@ -130,15 +130,22 @@ export class ImageLoader {
       throw new Error('Low-res image not found');
     }
 
-    // Create high-res image
+    // Cancel any pending high-res listeners before starting a new one
+    const existingHiResLoad = this.activeLoads.get('hiResImageLoad');
+    if (existingHiResLoad) {
+      existingHiResLoad();
+      this.activeLoads.delete('hiResImageLoad');
+    }
+
+    // Create high-res image in DOM; keep low-res visible until high-res finishes loading
     const hiResImage = createElement({
       tagName: 'img',
       className: 'iv-image iv-large-image',
       src: safeHiResSrc,
       parent: imageWrap,
-    });
+    }) as HTMLImageElement;
 
-    // Copy styles from low-res to high-res image
+    // Match positioning so the swap is seamless
     const lowResStyles = window.getComputedStyle(lowResImg);
     setStyle(hiResImage, {
       width: lowResStyles.width,
@@ -150,10 +157,22 @@ export class ImageLoader {
       visibility: lowResStyles.visibility,
     });
 
-    const onHighResImageLoad = () => {
-      // Remove low-res image and replace with high-res
+    const swapToHighRes = () => {
+      const hiResRemover = this.activeLoads.get('hiResImageLoad');
+      hiResRemover?.();
+      this.activeLoads.delete('hiResImageLoad');
+
+      // Remove low-res and make high-res primary
       remove(lowResImg);
-      this.elements.image = hiResImage as HTMLImageElement;
+      this.elements.image = hiResImage;
+
+      // Defensive cleanup: ensure only the high-res image remains in the wrap
+      const images = imageWrap.querySelectorAll('.iv-image');
+      images.forEach((img) => {
+        if (img !== hiResImage) {
+          remove(img);
+        }
+      });
 
       // Notify that high-res image is loaded
       if (this.onHighResLoaded) {
@@ -161,11 +180,13 @@ export class ImageLoader {
       }
     };
 
-    if (imageLoaded(hiResImage as HTMLImageElement)) {
-      onHighResImageLoad();
-    } else {
-      const hiResLoadRemover = assignEvent(hiResImage, 'load', onHighResImageLoad);
-      this.activeLoads.set('hiResImageLoad', hiResLoadRemover);
+    // Attach listener before checking load state to avoid missing cached load events
+    const hiResLoadRemover = assignEvent(hiResImage, 'load', swapToHighRes);
+    this.activeLoads.set('hiResImageLoad', hiResLoadRemover);
+
+    // If already loaded from cache, swap immediately
+    if (imageLoaded(hiResImage)) {
+      swapToHighRes();
     }
   }
 
