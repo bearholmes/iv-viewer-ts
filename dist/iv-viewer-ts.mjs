@@ -580,6 +580,11 @@ const _ImageLoader = class _ImageLoader {
     if (!lowResImg) {
       throw new Error("Low-res image not found");
     }
+    const existingHiResLoad = this.activeLoads.get("hiResImageLoad");
+    if (existingHiResLoad) {
+      existingHiResLoad();
+      this.activeLoads.delete("hiResImageLoad");
+    }
     const hiResImage = createElement({
       tagName: "img",
       className: "iv-image iv-large-image",
@@ -596,18 +601,26 @@ const _ImageLoader = class _ImageLoader {
       maxHeight: lowResStyles.maxHeight,
       visibility: lowResStyles.visibility
     });
-    const onHighResImageLoad = () => {
+    const swapToHighRes = () => {
+      const hiResRemover = this.activeLoads.get("hiResImageLoad");
+      hiResRemover == null ? void 0 : hiResRemover();
+      this.activeLoads.delete("hiResImageLoad");
       remove(lowResImg);
       this.elements.image = hiResImage;
+      const images = imageWrap.querySelectorAll(".iv-image");
+      images.forEach((img) => {
+        if (img !== hiResImage) {
+          remove(img);
+        }
+      });
       if (this.onHighResLoaded) {
         this.onHighResLoaded();
       }
     };
+    const hiResLoadRemover = assignEvent(hiResImage, "load", swapToHighRes);
+    this.activeLoads.set("hiResImageLoad", hiResLoadRemover);
     if (imageLoaded(hiResImage)) {
-      onHighResImageLoad();
-    } else {
-      const hiResLoadRemover = assignEvent(hiResImage, "load", onHighResImageLoad);
-      this.activeLoads.set("hiResImageLoad", hiResLoadRemover);
+      swapToHighRes();
     }
   }
   /**

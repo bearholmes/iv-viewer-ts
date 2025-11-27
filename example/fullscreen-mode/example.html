@@ -1,46 +1,49 @@
 <html>
-  <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>image viewer</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
-    <link href="../../dist/iv-viewer-ts.min.css" rel=" stylesheet" type="text/css" />
-    <style>
-      .gallery-items {
-        float: left;
-        height: 350px;
-      }
-    </style>
-  </head>
 
-  <body>
-    <h3>Full Screen Mode</h3>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Full Screen Mode - iv-viewer-ts</title>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="../../dist/iv-viewer-ts.min.css" rel="stylesheet" type="text/css" />
+  <link href="../index.css" rel="stylesheet" type="text/css" />
+  <style>
+    .gallery-items {
+      float: left;
+      height: 300px;
+      margin-right: 1rem;
+      margin-bottom: 1rem;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .gallery-items:hover {
+      transform: scale(1.02);
+      box-shadow: var(--shadow-md);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" style="padding-top: 2rem; padding-bottom: 2rem;">
+    <a href="../index.html" class="btn btn-secondary" style="margin-bottom: 2rem;">← Back to Home</a>
+
+    <h1 class="section-title" style="text-align: left; margin-bottom: 0.5rem;">Full Screen Mode</h1>
+    <p class="section-description" style="text-align: left;">Click thumbnails to view images in an immersive full-screen
+      overlay.</p>
 
     <div id="image-gallery-1" class="cf">
-      <img
-        src="../images/1.jpg"
-        data-high-res-src="../images/1_big.jpg"
-        alt=""
-        class="gallery-items"
-      />
-      <img
-        src="../images/2.jpg"
-        data-high-res-src="../images/2_big.jpg"
-        alt=""
-        class="gallery-items"
-      />
-      <img
-        src="../images/3.jpg"
-        data-high-res-src="../images/3_big.jpg"
-        alt=""
-        class="gallery-items"
-      />
-      <img
-        src="../images/4.jpg"
-        data-high-res-src="../images/4_big.jpg"
-        alt=""
-        class="gallery-items"
-      />
+      <img src="../images/1.jpg" data-high-res-src="../images/1_big.jpg" alt="" class="gallery-items" />
+      <img src="../images/2.jpg" data-high-res-src="../images/2_big.jpg" alt="" class="gallery-items" />
+      <img src="../images/3.jpg" data-high-res-src="../images/3_big.jpg" alt="" class="gallery-items" />
+      <img src="../images/4.jpg" data-high-res-src="../images/4_big.jpg" alt="" class="gallery-items" />
     </div>
-    <script type="module" src="./example.js"></script>
-  </body>
+  </div>
+  <script type="module" src="./example.js"></script>
+</body>
+
 </html>
