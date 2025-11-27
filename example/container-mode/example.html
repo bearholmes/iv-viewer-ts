@@ -2,15 +2,23 @@
 
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>image viewer</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
-  <link href="../../dist/iv-viewer-ts.min.css" rel=" stylesheet" type="text/css" />
+  <title>Container Mode - iv-viewer-ts</title>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="../../dist/iv-viewer-ts.min.css" rel="stylesheet" type="text/css" />
+  <link href="../index.css" rel="stylesheet" type="text/css" />
   <style>
     #image-gallery {
       width: 100%;
       position: relative;
       height: 650px;
       background: #000;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
     }
 
     #image-gallery .image-container {
@@ -27,6 +35,14 @@
       height: 32px;
       margin-top: -66px;
       top: 50%;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    #image-gallery .prev:hover,
+    #image-gallery .next:hover {
+      opacity: 1;
     }
 
     #image-gallery .prev {
@@ -35,7 +51,6 @@
 
     #image-gallery .next {
       right: 20px;
-      cursor: pointer;
     }
 
     #image-gallery .footer-info {
@@ -45,24 +60,32 @@
       left: 0;
       bottom: 0;
       line-height: 50px;
-      font-size: 24px;
+      font-size: 16px;
       text-align: center;
-      color: white;
-      border-top: 1px solid #fff;
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-family: var(--font-sans);
     }
   </style>
 </head>
 
 <body>
-  <h3>Container Mode</h3>
+  <div class="container" style="padding-top: 2rem; padding-bottom: 2rem;">
+    <a href="../index.html" class="btn btn-secondary" style="margin-bottom: 2rem;">← Back to Home</a>
 
-  <div id="image-gallery">
-    <div class="image-container"></div>
-    <img src="../images/left.svg" class="prev" />
-    <img src="../images/right.svg" class="next" />
-    <div class="footer-info">
-      <span class="current"></span>/
-      <span class="total"></span>
+    <h1 class="section-title" style="text-align: left; margin-bottom: 0.5rem;">Container Mode</h1>
+    <p class="section-description" style="text-align: left;">Embed the viewer in a custom container with navigation
+      controls.</p>
+
+    <div id="image-gallery">
+      <div class="image-container"></div>
+      <img src="../images/left.svg" class="prev" />
+      <img src="../images/right.svg" class="next" />
+      <div class="footer-info">
+        <span class="current"></span> / <span class="total"></span>
+      </div>
     </div>
   </div>
 

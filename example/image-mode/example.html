@@ -1,33 +1,40 @@
 <html>
-  <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>image viewer</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
-  <link href="../../dist/iv-viewer-ts.min.css" rel=" stylesheet" type="text/css" />
-    <style>
-      .pannable-image {
-        width: 700px;
-      }
-    </style>
-  </head>
 
-  <body>
-    <h3>Image Mode</h3>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Image Mode - iv-viewer-ts</title>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="../../dist/iv-viewer-ts.min.css" rel="stylesheet" type="text/css" />
+  <link href="../index.css" rel="stylesheet" type="text/css" />
+  <style>
+    .pannable-image {
+      width: 100%;
+      max-width: 700px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" style="padding-top: 2rem; padding-bottom: 2rem;">
+    <a href="../index.html" class="btn btn-secondary" style="margin-bottom: 2rem;">← Back to Home</a>
+
+    <h1 class="section-title" style="text-align: left; margin-bottom: 0.5rem;">Image Mode</h1>
+    <p class="section-description" style="text-align: left;">Enhance existing &lt;img&gt; elements with zoom and pan
+      capabilities.</p>
 
     <div id="image-gallery" class="cf">
-      <img
-        src="../images/1.jpg"
-        data-high-res-src="../images/1_big.jpg"
-        alt=""
-        class="pannable-image"
-      />
-      <img
-        src="../images/2.jpg"
-        data-high-res-src="../images/2_big.jpg"
-        alt=""
-        class="pannable-image"
-      />
+      <img src="../images/1.jpg" data-high-res-src="../images/1_big.jpg" alt="" class="pannable-image" />
+      <img src="../images/2.jpg" data-high-res-src="../images/2_big.jpg" alt="" class="pannable-image" />
     </div>
-    <script type="module" src="./example.js"></script>
-  </body>
+  </div>
+  <script type="module" src="./example.js"></script>
+</body>
+
 </html>

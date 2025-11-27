@@ -1,19 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="iv-viewer-ts - Modern TypeScript image viewer with Google Photos-like zoom and pan" />
+  <meta name="description"
+    content="iv-viewer-ts - Modern TypeScript image viewer with Google Photos-like zoom and pan" />
   <title>iv-viewer-ts - Modern Image Viewer Demo</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23111'/%3E%3Ctext x='50%25' y='55%25' font-size='32' fill='%23fff' text-anchor='middle'%3EIV%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css" />
 </head>
+
 <body>
   <header class="header">
     <div class="container">
       <div class="header-content">
         <h1 class="logo">
-          <span class="logo-icon">📸</span>
+          <span class="logo-icon">IV</span>
           iv-viewer-ts
         </h1>
         <p class="tagline">Modern TypeScript image viewer with Google Photos-like zoom and pan</p>
@@ -24,15 +31,18 @@
           <span class="badge">🔒 TypeScript</span>
         </div>
         <div class="header-actions">
-          <a href="https://github.com/bearholmes/iv-viewer-ts" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/bearholmes/iv-viewer-ts" class="btn btn-primary" target="_blank"
+            rel="noopener noreferrer">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
             </svg>
             View on GitHub
           </a>
-          <a href="https://www.npmjs.com/package/iv-viewer-ts" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+          <a href="https://www.npmjs.com/package/iv-viewer-ts" class="btn btn-secondary" target="_blank"
+            rel="noopener noreferrer">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M0 0v16h16V0H0zm13 13H8v-2h5v2zm0-3H8V8h5v2zm0-3H3V5h10v2z"/>
+              <path d="M0 0v16h16V0H0zm13 13H8v-2h5v2zm0-3H8V8h5v2zm0-3H3V5h10v2z" />
             </svg>
             npm Package
           </a>
@@ -44,7 +54,7 @@
   <main class="main">
     <div class="container">
       <section class="section">
-        <h2 class="section-title">📚 Interactive Examples</h2>
+        <h2 class="section-title">Interactive Examples</h2>
         <p class="section-description">Choose an example to see iv-viewer-ts in action</p>
 
         <div class="examples-grid">
@@ -53,7 +63,8 @@
             <div class="example-icon">🖼️</div>
             <h3 class="example-title">Full-Screen Mode</h3>
             <p class="example-description">
-              Click thumbnails to view images in an immersive full-screen overlay. Perfect for photo galleries and lightboxes.
+              Click thumbnails to view images in an immersive full-screen overlay. Perfect for photo galleries and
+              lightboxes.
             </p>
             <div class="example-features">
               <span class="feature-tag">Lightbox</span>
@@ -87,7 +98,8 @@
             <div class="example-icon">🎨</div>
             <h3 class="example-title">Image Mode</h3>
             <p class="example-description">
-              Enhance existing &lt;img&gt; elements with zoom and pan capabilities. Ideal for product images and detailed views.
+              Enhance existing &lt;img&gt; elements with zoom and pan capabilities. Ideal for product images and
+              detailed views.
             </p>
             <div class="example-features">
               <span class="feature-tag">Direct Enhancement</span>
@@ -102,7 +114,7 @@
       </section>
 
       <section class="section features-section">
-        <h2 class="section-title">✨ Key Features</h2>
+        <h2 class="section-title">Key Features</h2>
 
         <div class="features-grid">
           <div class="feature-item">
@@ -156,7 +168,7 @@
       </section>
 
       <section class="section install-section">
-        <h2 class="section-title">🚀 Quick Start</h2>
+        <h2 class="section-title">Quick Start</h2>
 
         <div class="install-grid">
           <div class="install-card">
@@ -173,7 +185,7 @@
             </div>
           </div>
 
-          <div class="install-card full-width">
+          <div class="install-card">
             <h3 class="install-title">3. Use</h3>
             <div class="code-block">
               <code>const viewer = new ImageViewer('#container');<br>viewer.load('image.jpg', 'high-res.jpg');</code>
@@ -189,10 +201,12 @@
             Check out the documentation on GitHub or install the package from npm
           </p>
           <div class="cta-buttons">
-            <a href="https://github.com/bearholmes/iv-viewer-ts#readme" class="btn btn-primary btn-large" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/bearholmes/iv-viewer-ts#readme" class="btn btn-primary btn-large"
+              target="_blank" rel="noopener noreferrer">
               Read Documentation
             </a>
-            <a href="https://www.npmjs.com/package/iv-viewer-ts" class="btn btn-secondary btn-large" target="_blank" rel="noopener noreferrer">
+            <a href="https://www.npmjs.com/package/iv-viewer-ts" class="btn btn-secondary btn-large" target="_blank"
+              rel="noopener noreferrer">
               View on npm
             </a>
           </div>
@@ -205,10 +219,12 @@
     <div class="container">
       <div class="footer-content">
         <p class="footer-text">
-          Made with ❤️ by <a href="https://github.com/bearholmes" target="_blank" rel="noopener noreferrer">bearholmes</a>
+          Made with ❤️ by <a href="https://github.com/bearholmes" target="_blank"
+            rel="noopener noreferrer">bearholmes</a>
         </p>
         <p class="footer-text">
-          Fork of <a href="https://github.com/s-yadav/iv-viewer" target="_blank" rel="noopener noreferrer">iv-viewer</a> by
+          Fork of <a href="https://github.com/s-yadav/iv-viewer" target="_blank" rel="noopener noreferrer">iv-viewer</a>
+          by
           <a href="https://github.com/s-yadav" target="_blank" rel="noopener noreferrer">s-yadav</a>
         </p>
         <p class="footer-text">
@@ -218,4 +234,5 @@
     </div>
   </footer>
 </body>
+
 </html>
