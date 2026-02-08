@@ -265,7 +265,8 @@ export function setStyle(
         const sanitizedValue = stringValue.replace(/[<>'"]/g, '');
 
         // Use direct property assignment for camelCase compatibility
-        (element.style as any)[key] = sanitizedValue;
+        const style = element.style as CSSStyleDeclaration & Record<string, string>;
+        style[key] = sanitizedValue;
       });
     }
   });

@@ -1,6 +1,6 @@
 {
   "name": "iv-viewer-ts",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "A zooming and panning plugin inspired by google photos for your web images.",
   "main": "dist/iv-viewer-ts.js",
   "module": "dist/iv-viewer-ts.mjs",
@@ -50,6 +50,7 @@
     "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
+    "@vitest/coverage-v8": "4.0.18",
     "@vitest/ui": "^4.0.13",
     "autoprefixer": "^10.4.20",
     "cssnano": "^7.0.6",
@@ -60,10 +61,16 @@
     "postcss": "^8.4.49",
     "prettier": "^3.4.2",
     "sass": "^1.83.0",
+    "terser": "^5.46.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vite-plugin-dts": "^4.3.0",
     "vitest": "^4.0.13"
+  },
+  "overrides": {
+    "@isaacs/brace-expansion": "^5.0.1",
+    "diff": "^8.0.3",
+    "lodash": "^4.17.23"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
