@@ -60,10 +60,16 @@
     "postcss": "^8.4.49",
     "prettier": "^3.4.2",
     "sass": "^1.83.0",
+    "terser": "^5.46.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vite-plugin-dts": "^4.3.0",
     "vitest": "^4.0.13"
+  },
+  "overrides": {
+    "@isaacs/brace-expansion": "^5.0.1",
+    "diff": "^8.0.3",
+    "lodash": "^4.17.23"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
